@@ -4,7 +4,12 @@
 #include <QMainWindow>
 #include <QSettings>
 #include <QTimer>
-#include "llamaworker.h"
+
+#include "dialogconfig.h"
+
+class LlamaWorker;
+
+class QTextEdit;
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -31,10 +36,20 @@ private slots:
 
     void onSendStatus(QString msg, bool ok);
 
+    void onSendPiece(QString piece);
+
     void onTimeout();
+
+    void onAppendMessage(const QString& msg);
+
+    void on_tbtConfig_clicked();
 
 private:
     Ui::MainWindow *ui;
+
+    DialogConfig mDlgConfig;
+
+    QTextEdit *mTextEdit{};
 
     QTimer mTimer;
     bool mIsLoading{};

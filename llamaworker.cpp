@@ -63,6 +63,20 @@ LlamaWorker::~LlamaWorker()
     wait();
 }
 
+QStringList LlamaWorker::getDevices() const
+{
+    QStringList ret;
+
+    for(int i = 0; i < ggml_backend_dev_count(); ++i){
+        auto dev = ggml_backend_dev_get(i);
+        auto cname = ggml_backend_dev_name(dev);
+        auto cdesc = ggml_backend_dev_description(dev);
+        ret.push_back(QString::fromUtf8(cname));
+        ret.push_back(QString::fromUtf8(cdesc));
+    }
+    return ret;
+}
+
 void LlamaWorker::loadModel(const QString &gguf, const Params &params)
 {
     releaseModel();
@@ -184,7 +198,7 @@ void LlamaWorker::clearMessage()
     mMessages = {};
 }
 
-void LlamaWorker::addNewMessage(const QString &user)
+void LlamaWorker::addNewMessage(const QString &system_prompt, const QString &user)
 {
     if(!mModel || !mCtx){
         emit sendStatus("Model is not loaded or context is not init", false);
@@ -194,6 +208,13 @@ void LlamaWorker::addNewMessage(const QString &user)
 
     mIsGen.exchange(true);
     mStop.exchange(false);
+
+    if(!system_prompt.isEmpty()){
+        common_chat_msg msg;
+        msg.role = "system";
+        msg.content = system_prompt.toStdString();
+        mMessages.push_back(std::move(msg));
+    }
 
     common_chat_msg msg;
     msg.role = "user";
@@ -215,7 +236,7 @@ void LlamaWorker::addNewMessage(const QString &user)
         return;
     }
 
-    auto formatted = params.prompt;
+    auto formatted = params.prompt.str();
 
     auto previous_size = mPreviousFormatted.size();
     if(previous_size > formatted.size() ||
@@ -242,7 +263,7 @@ void LlamaWorker::addNewMessage(const QString &user)
     history_inputs.enable_thinking = mUseThinking;
 
     try{
-        mPreviousFormatted = common_chat_templates_apply(mChatTemplates.get(), history_inputs).prompt;
+        mPreviousFormatted = common_chat_templates_apply(mChatTemplates.get(), history_inputs).prompt.str();
     }catch(const std::exception &e){
         emit sendStatus(QString("Failed to format conversation history %1")
                             .arg(QString::fromLatin1(e.what())), false);
@@ -285,8 +306,6 @@ std::string LlamaWorker::generate(const std::string prompt)
     }
 
     std::string piece;
-
-    emit sendPiece("[Begin]\n");
 
     int tokens = 0;
     timeout.start();
@@ -344,6 +363,8 @@ std::string LlamaWorker::generate(const std::string prompt)
     if(mStop.load()){
         emit stopGenerated();
     }
+
+    emit sendPiece("\n");
 
     emit sendMessage(QString::fromStdString(response));
     emit generateFinished();

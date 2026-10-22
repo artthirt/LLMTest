@@ -47,6 +47,7 @@ add_subdirectory(llama)
 add_executable(LLMTest
     ${PROJECT_SOURCES}
     llamaworker.h llamaworker.cpp
+    dialogconfig.h dialogconfig.cpp dialogconfig.ui
 )
 
 target_link_libraries(LLMTest PRIVATE

@@ -4,6 +4,8 @@
 #include <QFileDialog>
 #include <QSettings>
 #include <QFileInfo>
+#include <QTextEdit>
+#include <QTextCursor>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -11,6 +13,9 @@ MainWindow::MainWindow(QWidget *parent)
     , mSetts("LLMTest", "LLMTest")
 {
     ui->setupUi(this);
+
+    mTextEdit = new QTextEdit;
+    ui->vlTextEdit->addWidget(mTextEdit);
 
     ui->mainSplitter->setSizes({600, 100});
 
@@ -21,13 +26,9 @@ MainWindow::MainWindow(QWidget *parent)
     }, Qt::QueuedConnection);
 
     connect(mWorker.get(), &LlamaWorker::generateFinished, this, [this](){
-        ui->pteOutput->appendPlainText("[End]\n");
     }, Qt::QueuedConnection);
 
-    connect(mWorker.get(), &LlamaWorker::sendPiece, this, [this](QString piece){
-        ui->pteOutput->moveCursor(QTextCursor::End);
-        ui->pteOutput->insertPlainText(piece);
-    });
+    connect(mWorker.get(), &LlamaWorker::sendPiece, this, &MainWindow::onSendPiece);
     connect(mWorker.get(), &LlamaWorker::modelLoaded, this, [this](){
         mIsLoading = false;
         onSendStatus("Model loaded", true);
@@ -62,6 +63,10 @@ MainWindow::MainWindow(QWidget *parent)
     }, Qt::QueuedConnection);
 
     loadSettings();
+
+    mDlgConfig.setDevices(mWorker->getDevices());
+    //onAppendMessage("Test Messsage");
+    //onSendPiece("Test Answer\n");
 }
 
 MainWindow::~MainWindow()
@@ -85,10 +90,7 @@ void MainWindow::on_tbtSelect_clicked()
 
 void MainWindow::on_pbLoad_clicked()
 {
-    LlamaWorker::Params params;
-    params.context = ui->sbMaxContext->value();
-    params.gpu_layers = ui->sbGpuLayers->value();
-    params.temp = ui->dsbTemp->value();
+    LlamaWorker::Params params = mDlgConfig.params();
     params.enable_thinking = ui->chbThinking->isChecked();
 
     QString modelpath = ui->lePath->text();
@@ -111,14 +113,21 @@ void MainWindow::onSendStatus(QString msg, bool ok)
 {
     QString html, font;
     if(ok){
-        font = "<span style='color:green;'>%1</span>";
+        font = "<span style='color:green;'>[System]> %1</span><br>";
     }else{
-        font = "<span style='color:red;'>%1</span>";
+        font = "<span style='color:red;'>[System]> %1</span><br>";
     }
     html = font.arg(msg);
-    ui->pteOutput->appendHtml(html);
+    mTextEdit->moveCursor(QTextCursor::End);
+    mTextEdit->insertHtml(html);
     ui->statusbar->setStyleSheet(ok? "color: green;" : "color: red;");
     ui->statusbar->showMessage(msg);
+}
+
+void MainWindow::onSendPiece(QString piece)
+{
+    mTextEdit->moveCursor(QTextCursor::End);
+    mTextEdit->insertPlainText(piece);
 }
 
 void MainWindow::onTimeout()
@@ -130,21 +139,34 @@ void MainWindow::onTimeout()
     }
 }
 
+void MainWindow::onAppendMessage(const QString &msg)
+{
+    if(msg.isEmpty()){
+        onSendStatus("Message is empty", false);
+        return;
+    }
+    mTextEdit->moveCursor(QTextCursor::End);
+    mTextEdit->insertHtml("<span style='color:#aea;'><i>[User]> " + msg + "</i></span><br>");
+}
+
 void MainWindow::on_pbSend_clicked()
 {
     if(mWorker->isGen()){
         mWorker->stopGenerate();
         return;
     }
-    QString msg = ui->pteMsg->toPlainText();
+
+    auto msg = ui->pteMsg->toPlainText();
     if(msg.isEmpty()){
         onSendStatus("Message is empty", false);
         return;
     }
+    auto sys = mDlgConfig.systemPrompt();
 
-    ui->pteOutput->appendHtml("<span>==== User ====</span><br><i>" + msg + "</i><br><span>============</span><br>");
+    onAppendMessage(msg);
 
     QMetaObject::invokeMethod(mWorker.get(), "addNewMessage", Qt::QueuedConnection,
+                              Q_ARG(QString, sys),
                               Q_ARG(QString, msg));
 
     ui->pteMsg->clear();
@@ -155,15 +177,17 @@ void MainWindow::on_pbSend_clicked()
 void MainWindow::loadSettings()
 {
     ui->lePath->setText(mSetts.value("path").toString());
-    ui->sbGpuLayers->setValue(mSetts.value("gpu_layers", -1).toInt());
-    ui->sbMaxContext->setValue(mSetts.value("max_context", 8192).toInt());
-    ui->dsbTemp->setValue(mSetts.value("temp", 0.8).toDouble());
+    mDlgConfig.loadSettings(mSetts);
 }
 
 void MainWindow::saveSettings()
 {
     mSetts.setValue("path", ui->lePath->text());
-    mSetts.setValue("gpu_layers", ui->sbGpuLayers->value());
-    mSetts.setValue("max_context", ui->sbMaxContext->value());
-    mSetts.setValue("temp", ui->dsbTemp->value());
+    mDlgConfig.saveSettings(mSetts);
 }
+
+void MainWindow::on_tbtConfig_clicked()
+{
+    mDlgConfig.show();
+}
+

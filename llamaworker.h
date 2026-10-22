@@ -27,6 +27,12 @@ public:
         bool use_flashatt{true};
         ggml_type type_k = ggml_type::GGML_TYPE_F16;
         ggml_type type_v = ggml_type::GGML_TYPE_F16;
+
+        llama_split_mode split_mode{llama_split_mode::LLAMA_SPLIT_MODE_LAYER};
+        QStringList selectedDevices;
+        QVector<float> splitBetweenDevices;
+
+        QString system_prompt;
     };
 
     LlamaWorker();
@@ -36,6 +42,8 @@ public:
     bool isError() const { return mIsError; }
     bool isGen() const { return mIsGen.load(); }
     bool isLoading() const { return mIsLoading; }
+
+    QStringList getDevices() const;
 
 signals:
     void loadingProgress(float);
@@ -55,7 +63,7 @@ public slots:
     void unloadModel();
     void releaseModel();
     void clearMessage();
-    void addNewMessage(const QString& user);
+    void addNewMessage(const QString& system_prompt, const QString& user);
     void stopGenerate();
     void _onUpdateProgress(float val);
 
