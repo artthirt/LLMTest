@@ -1,6 +1,34 @@
 #include "dialogconfig.h"
 #include "ui_dialogconfig.h"
 
+#include <QToolButton>
+#include <QTimer>
+#include <QClipboard>
+
+class ResizeEventFilter : public QObject
+{
+public:
+    ResizeEventFilter(QObject *parent, std::function<void()> callback)
+        : QObject(parent), m_callback(std::move(callback))
+    {
+    }
+
+protected:
+    bool eventFilter(QObject *obj, QEvent *event) override
+    {
+        if (event->type() == QEvent::Resize) {
+            m_callback();
+        }
+
+        return QObject::eventFilter(obj, event);
+    }
+
+private:
+    std::function<void()> m_callback;
+};
+
+////////////////////////////////
+
 DialogConfig::DialogConfig(QWidget *parent)
     : QDialog(parent)
     , ui(new Ui::DialogConfig)
@@ -11,6 +39,14 @@ DialogConfig::DialogConfig(QWidget *parent)
     ui->tvDevices->horizontalHeader()->setStretchLastSection(true);
     mDevsModel.setColumnCount(2);
     mDevsModel.setHorizontalHeaderLabels({"✔", "Device"});
+
+    makeToolButton(ui->pteSystemPrompt, "❌", [this](){
+        ui->pteSystemPrompt->clear();
+    }, "Clear");
+
+    makeToolButton(ui->pteSystemPrompt, "📋", [this](){
+        qApp->clipboard()->setText(ui->pteSystemPrompt->toPlainText());
+    }, "Copy", 20);
 }
 
 DialogConfig::~DialogConfig()
@@ -113,3 +149,53 @@ void DialogConfig::on_buttonBox_accepted()
     mParams.selectedDevices = ldev;
 }
 
+void DialogConfig::makeToolButton(QPlainTextEdit* plainTextEdit,
+                                  const QString &text,
+                                  std::function<void()> fun,
+                                  const QString &tooltip,
+                                  int X)
+{
+    auto *button = new QToolButton(plainTextEdit);
+    button->setText(text);
+    // button->setIcon(style()->standardIcon(
+    //     QStyle::SP_MessageBoxInformation));
+    button->setToolTip(tooltip);
+    button->setAutoRaise(true);
+    button->setFixedSize(24, 24);
+
+    button->setStyleSheet(R"(
+    QToolButton {
+        background: transparent;
+        border: none;
+    }
+    QToolButton:hover {
+        background: rgba(128, 128, 128, 40);
+        border-radius: 4px;
+    }
+    QToolButton:pressed {
+        background: rgba(128, 128, 128, 80);
+    }
+)");
+
+    QObject::connect(button, &QToolButton::clicked, this, [this, fun]() {
+        // Your action here
+        if(fun){
+            fun();
+        }
+    });
+
+    auto updatePosition = [plainTextEdit, button, X]() {
+        button->move(plainTextEdit->width() - button->width() - 8 - X, 4);
+        button->raise();
+    };
+
+    QObject::connect(plainTextEdit, &QPlainTextEdit::textChanged,
+                     this, updatePosition); // Optional; not needed for resizing.
+
+    auto *filter = new ResizeEventFilter(
+        plainTextEdit, updatePosition);
+
+    plainTextEdit->installEventFilter(filter);
+
+    updatePosition();
+}

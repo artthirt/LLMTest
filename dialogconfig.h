@@ -10,6 +10,8 @@ namespace Ui {
 class DialogConfig;
 }
 
+class QPlainTextEdit;
+
 class DialogConfig : public QDialog
 {
     Q_OBJECT
@@ -37,6 +39,12 @@ private:
     QStandardItemModel mDevsModel;
     LlamaWorker::Params mParams;
     QStringList mDevices;
+
+    void makeToolButton(QPlainTextEdit* plainTextEdit,
+                        const QString &text,
+                        std::function<void()> fun,
+                        const QString &tooltip = {},
+                        int X = 0);
 };
 
 #endif // DIALOGCONFIG_H
