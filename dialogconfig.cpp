@@ -34,7 +34,8 @@ private:
 DialogConfig::DialogConfig(QWidget *parent)
     : QDialog(parent)
     , ui(new Ui::DialogConfig)
-    , mSetts("LLMTest", "LLMTest")
+    //, mSetts("LLMTest", "LLMTest")
+    , mSetts("config_LLMTest.ini", QSettings::IniFormat)
 {
     ui->setupUi(this);
 

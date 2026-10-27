@@ -106,7 +106,11 @@ MainWindow::MainWindow(QWidget *parent)
     ui->splitter->setSizes({1, 3});
     //onAppendMessage("Test Messsage");
     //onSendPiece("Test Answer\n");
-    const QPalette pal = ui->lvTabs->palette();
+    QPalette pal = ui->lvTabs->palette();
+    auto col = pal.color(QPalette::Base);
+    col = col.lighter();
+    pal.setColor(QPalette::AlternateBase, col);
+    ui->lvTabs->setPalette(pal);
 
     QString style = QString(R"(
     QListView {
@@ -250,7 +254,6 @@ void MainWindow::loadSettings()
         auto c = v.value<Content>();
         auto *item = new QStandardItem(c.caption);
         item->setData(QVariant::fromValue<Content>(c));
-        qDebug() << c.caption;
         mTabModel.appendRow(item);
     }
 
@@ -267,7 +270,6 @@ void MainWindow::saveSettings()
         auto content = item->data().value<Content>();
         content.caption = text;
         tabs.append(QVariant::fromValue<Content>(content));
-        qDebug() << content.caption;
     }
     mDlgConfig.settings()->setValue("tabs_list", tabs);
 
@@ -280,6 +282,9 @@ void MainWindow::updateTabs()
         mTabModel.appendRow(new QStandardItem("New Session"));
         auto index = mTabModel.indexFromItem(mTabModel.item(0));
         ui->lvTabs->setCurrentIndex(index);
+    }else{
+        ui->lvTabs->setCurrentIndex(mTabModel.index(0, 0));
+        loadItem(0);
     }
 }
 
@@ -291,6 +296,16 @@ void MainWindow::saveLastSession()
         mCurrentContent.context = mWorker->messages();
         mTabModel.item(mLastRow)->setData(QVariant::fromValue<Content>(mCurrentContent));
     }
+}
+
+void MainWindow::loadItem(int row)
+{
+    auto data = mTabModel.item(row)->data().value<Content>();
+    if(!data.empty()){
+        mWorker->swapMessages(data.context);
+        mTextEdit->document()->setHtml(data.content);
+    }
+
 }
 
 void MainWindow::on_tbtConfig_clicked()
@@ -315,11 +330,7 @@ void MainWindow::on_lvTabs_clicked(const QModelIndex &index)
 
         saveLastSession();
 
-        auto data = mTabModel.item(index.row())->data().value<Content>();
-        if(!data.empty()){
-            mWorker->swapMessages(data.context);
-            mTextEdit->document()->setHtml(data.content);
-        }
+        loadItem(index.row());
         mLastRow = index.row();
     }
 }

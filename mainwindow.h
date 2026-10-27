@@ -68,5 +68,6 @@ private:
     void updateTabs();
 
     void saveLastSession();
+    void loadItem(int row);
 };
 #endif // MAINWINDOW_H
