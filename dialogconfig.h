@@ -28,17 +28,26 @@ public:
 
     QString systemPrompt() const;
 
-    void loadSettings(QSettings &setts);
-    void saveSettings(QSettings &setts);
+    QString modelPath() const;
+
+    void loadSettings();
+    void saveSettings();
+
+    QSettings* settings();
+
+    void updateParams();
 
 private slots:
     void on_buttonBox_accepted();
+
+    void on_tbtSelect_clicked();
 
 private:
     Ui::DialogConfig *ui;
     QStandardItemModel mDevsModel;
     LlamaWorker::Params mParams;
     QStringList mDevices;
+    QSettings mSetts;
 
     void makeToolButton(QPlainTextEdit* plainTextEdit,
                         const QString &text,

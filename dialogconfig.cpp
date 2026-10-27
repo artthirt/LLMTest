@@ -4,6 +4,8 @@
 #include <QToolButton>
 #include <QTimer>
 #include <QClipboard>
+#include <QFileDialog>
+#include <QFileInfo>
 
 class ResizeEventFilter : public QObject
 {
@@ -32,6 +34,7 @@ private:
 DialogConfig::DialogConfig(QWidget *parent)
     : QDialog(parent)
     , ui(new Ui::DialogConfig)
+    , mSetts("LLMTest", "LLMTest")
 {
     ui->setupUi(this);
 
@@ -101,20 +104,45 @@ QString DialogConfig::systemPrompt() const
     return ui->pteSystemPrompt->toPlainText();
 }
 
-void DialogConfig::loadSettings(QSettings &setts)
+QString DialogConfig::modelPath() const
 {
-    ui->sbGpuLayers->setValue(setts.value("gpu_layers", -1).toInt());
-    ui->sbMaxContext->setValue(setts.value("max_context", 8192).toInt());
-    ui->dsbTemp->setValue(setts.value("temp", 0.8).toDouble());
-    ui->pteSystemPrompt->setPlainText(setts.value("system_prompt").toString());
+    return ui->lePath->text();
 }
 
-void DialogConfig::saveSettings(QSettings &setts)
+QSettings *DialogConfig::settings()
 {
-    setts.setValue("gpu_layers", ui->sbGpuLayers->value());
-    setts.setValue("max_context", ui->sbMaxContext->value());
-    setts.setValue("temp", ui->dsbTemp->value());
-    setts.setValue("system_prompt", ui->pteSystemPrompt->toPlainText());
+    return &mSetts;
+}
+
+void DialogConfig::loadSettings()
+{
+    ui->lePath->setText(mSetts.value("path").toString());
+    ui->sbGpuLayers->setValue(mSetts.value("gpu_layers", -1).toInt());
+    ui->sbMaxContext->setValue(mSetts.value("max_context", 8192).toInt());
+    ui->dsbTemp->setValue(mSetts.value("temp", 0.8).toDouble());
+    ui->pteSystemPrompt->setPlainText(mSetts.value("system_prompt").toString());
+    ui->chbThinking->setChecked(mSetts.value("thinking").toBool());
+
+    updateParams();
+}
+
+void DialogConfig::saveSettings()
+{
+    mSetts.setValue("path", ui->lePath->text());
+    mSetts.setValue("gpu_layers", ui->sbGpuLayers->value());
+    mSetts.setValue("max_context", ui->sbMaxContext->value());
+    mSetts.setValue("temp", ui->dsbTemp->value());
+    mSetts.setValue("system_prompt", ui->pteSystemPrompt->toPlainText());
+    mSetts.setValue("thinking", ui->chbThinking->isChecked());
+}
+
+void DialogConfig::updateParams()
+{
+    mParams.context = ui->sbMaxContext->value();
+    mParams.gpu_layers = ui->sbGpuLayers->value();
+    mParams.temp = ui->dsbTemp->value();
+    mParams.system_prompt = ui->pteSystemPrompt->toPlainText();
+    mParams.enable_thinking = ui->chbThinking->isChecked();
 }
 
 void DialogConfig::on_buttonBox_accepted()
@@ -123,6 +151,7 @@ void DialogConfig::on_buttonBox_accepted()
     mParams.gpu_layers = ui->sbGpuLayers->value();
     mParams.temp = ui->dsbTemp->value();
     mParams.system_prompt = ui->pteSystemPrompt->toPlainText();
+    mParams.enable_thinking = ui->chbThinking->isChecked();
 
     auto spl = ui->leSplitted->text().split(",");
     QVector<float> vspl;
@@ -198,4 +227,15 @@ void DialogConfig::makeToolButton(QPlainTextEdit* plainTextEdit,
     plainTextEdit->installEventFilter(filter);
 
     updatePosition();
+}
+
+void DialogConfig::on_tbtSelect_clicked()
+{
+    QString path = mSetts.value("path").toString();
+    QString sdir = QFileInfo(path).absolutePath();
+    path = QFileDialog::getOpenFileName(nullptr, "GGUF model", sdir, "*.gguf");
+    if(!path.isEmpty()){
+        ui->lePath->setText(path);
+    }
+    saveSettings();
 }

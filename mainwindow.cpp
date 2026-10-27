@@ -1,17 +1,50 @@
 #include "mainwindow.h"
 #include "./ui_mainwindow.h"
 
+#include <QDialog>
 #include <QFileDialog>
 #include <QSettings>
 #include <QFileInfo>
 #include <QTextEdit>
 #include <QTextCursor>
+#include <QLineEdit>
+#include <QPushButton>
+#include <QVBoxLayout>
+#include <QHBoxLayout>
+
+class DialogSession: public QDialog{
+public:
+    DialogSession(): QDialog(){
+        auto hl = new QHBoxLayout;
+        auto le = new QLineEdit;
+        auto pb = new QPushButton("Set");
+        hl->addWidget(le);
+        hl->addWidget(pb);
+
+        le->setText(mName);
+
+        connect(pb, &QPushButton::clicked, this, [this, le](){
+            mName = le->text();
+            accept();
+        });
+
+        setLayout(hl);
+    }
+    QString sessionName() const{
+        return mName;
+    }
+private:
+    QString mName{"New Session"};
+};
+
+/////////////////////////////
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
-    , mSetts("LLMTest", "LLMTest")
 {
+    qRegisterMetaType<Content>("Content");
+
     ui->setupUi(this);
 
     mTextEdit = new QTextEdit;
@@ -62,11 +95,59 @@ MainWindow::MainWindow(QWidget *parent)
         ui->lbProgress->setText(QString("%1 %").arg(int(val * 100)));
     }, Qt::QueuedConnection);
 
+    ui->lvTabs->setModel(&mTabModel);
+
     loadSettings();
 
+    updateTabs();
+
     mDlgConfig.setDevices(mWorker->getDevices());
+
+    ui->splitter->setSizes({1, 3});
     //onAppendMessage("Test Messsage");
     //onSendPiece("Test Answer\n");
+    const QPalette pal = ui->lvTabs->palette();
+
+    QString style = QString(R"(
+    QListView {
+        background-color: %1;
+        color: %2;
+        border: 1px solid %3;
+        outline: none;
+    }
+
+    QListView::item {
+        background-color: %1;
+        color: %2;
+        border: 1px solid transparent;
+        padding: 6px 10px;
+    }
+
+    QListView::item:hover {
+        background-color: %4;
+    }
+
+    QListView::item:selected {
+        background-color: %5;
+        color: %6;
+        border: 1px solid %3;
+    }
+    QListView {
+        border-right: none;
+    }
+
+    QListView::item:selected {
+        border-right: 1px solid #ffffff;
+    }
+    )")
+    .arg(pal.color(QPalette::Base).name())
+    .arg(pal.color(QPalette::Text).name())
+    .arg(pal.color(QPalette::Mid).name())
+    .arg(pal.color(QPalette::AlternateBase).name())
+    .arg(pal.color(QPalette::Highlight).name())
+    .arg(pal.color(QPalette::HighlightedText).name());
+
+    ui->lvTabs->setStyleSheet(style);
 }
 
 MainWindow::~MainWindow()
@@ -77,23 +158,11 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
-void MainWindow::on_tbtSelect_clicked()
-{
-    QString path = mSetts.value("path").toString();
-    QString sdir = QFileInfo(path).absolutePath();
-    path = QFileDialog::getOpenFileName(nullptr, "GGUF model", sdir, "*.gguf");
-    if(!path.isEmpty()){
-        ui->lePath->setText(path);
-    }
-    saveSettings();
-}
-
 void MainWindow::on_pbLoad_clicked()
 {
     LlamaWorker::Params params = mDlgConfig.params();
-    params.enable_thinking = ui->chbThinking->isChecked();
 
-    QString modelpath = ui->lePath->text();
+    QString modelpath = mDlgConfig.modelPath();
 
     onSendStatus("Model loading...", true);
     mIsLoading = true;
@@ -176,18 +245,82 @@ void MainWindow::on_pbSend_clicked()
 
 void MainWindow::loadSettings()
 {
-    ui->lePath->setText(mSetts.value("path").toString());
-    mDlgConfig.loadSettings(mSetts);
+    auto tabsList = mDlgConfig.settings()->value("tabs_list").toList();
+    for(auto v: tabsList){
+        auto c = v.value<Content>();
+        auto *item = new QStandardItem(c.caption);
+        item->setData(QVariant::fromValue<Content>(c));
+        qDebug() << c.caption;
+        mTabModel.appendRow(item);
+    }
+
+    mDlgConfig.loadSettings();
 }
 
 void MainWindow::saveSettings()
 {
-    mSetts.setValue("path", ui->lePath->text());
-    mDlgConfig.saveSettings(mSetts);
+    QList<QVariant> tabs;
+    for(int i = 0; i < mTabModel.rowCount(); ++i){
+
+        auto item = mTabModel.item(i, 0);
+        auto text = item->text();
+        auto content = item->data().value<Content>();
+        content.caption = text;
+        tabs.append(QVariant::fromValue<Content>(content));
+        qDebug() << content.caption;
+    }
+    mDlgConfig.settings()->setValue("tabs_list", tabs);
+
+    mDlgConfig.saveSettings();
+}
+
+void MainWindow::updateTabs()
+{
+    if(mTabModel.rowCount() == 0){
+        mTabModel.appendRow(new QStandardItem("New Session"));
+        auto index = mTabModel.indexFromItem(mTabModel.item(0));
+        ui->lvTabs->setCurrentIndex(index);
+    }
+}
+
+void MainWindow::saveLastSession()
+{
+    if(mLastRow >= 0 && mLastRow < mTabModel.rowCount()){
+        mCurrentContent.caption = mTabModel.item(mLastRow)->text();
+        mCurrentContent.content = mTextEdit->document()->toHtml();
+        mCurrentContent.context = mWorker->messages();
+        mTabModel.item(mLastRow)->setData(QVariant::fromValue<Content>(mCurrentContent));
+    }
 }
 
 void MainWindow::on_tbtConfig_clicked()
 {
     mDlgConfig.show();
+}
+
+void MainWindow::on_pbNewSession_clicked()
+{
+    DialogSession dlg;
+    if(dlg.exec()){
+        auto name = dlg.sessionName();
+        mTabModel.appendRow(new QStandardItem(name));
+        saveLastSession();
+
+    }
+}
+
+void MainWindow::on_lvTabs_clicked(const QModelIndex &index)
+{
+    if(mLastRow != index.row()){
+
+        saveLastSession();
+
+        auto data = mTabModel.item(index.row())->data().value<Content>();
+        if(!data.empty()){
+            mWorker->swapMessages(data.context);
+            mTextEdit->document()->setHtml(data.content);
+        }
+        mLastRow = index.row();
+    }
 }
 

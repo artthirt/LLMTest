@@ -4,6 +4,7 @@
 #include <QMainWindow>
 #include <QSettings>
 #include <QTimer>
+#include <QStandardItemModel>
 
 #include "dialogconfig.h"
 
@@ -26,8 +27,6 @@ public:
     ~MainWindow() override;
 
 private slots:
-    void on_tbtSelect_clicked();
-
     void on_pbLoad_clicked();
 
     void on_pbSend_clicked();
@@ -44,10 +43,16 @@ private slots:
 
     void on_tbtConfig_clicked();
 
+    void on_pbNewSession_clicked();
+
+    void on_lvTabs_clicked(const QModelIndex &index);
+
 private:
     Ui::MainWindow *ui;
-
+    QStandardItemModel mTabModel;
     DialogConfig mDlgConfig;
+    Content mCurrentContent;
+    int mLastRow{};
 
     QTextEdit *mTextEdit{};
 
@@ -56,9 +61,12 @@ private:
     int mLoadingCnt{};
 
     std::unique_ptr<LlamaWorker> mWorker;
-    QSettings mSetts;
 
     void loadSettings();
     void saveSettings();
+
+    void updateTabs();
+
+    void saveLastSession();
 };
 #endif // MAINWINDOW_H

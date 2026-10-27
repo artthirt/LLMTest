@@ -4,9 +4,55 @@
 #include "chat.h"
 #include <QObject>
 #include <QThread>
+#include <QVariant>
+#include <QDataStream>
 #include <llama.h>
 #include <atomic>
-#include <functional>
+
+class Content{
+public:
+    QString caption;
+    QString content;
+    std::vector<common_chat_msg> context;
+    bool empty() const { return content.isEmpty() && context.empty(); }
+
+    QVariant toVariant() const{
+        return QVariant::fromValue(*this);
+    }
+    static Content fromVariant(const QVariant& v){
+        return v.value<Content>();
+    }
+};
+
+inline QDataStream& operator<<(QDataStream& out, const Content& c)
+{
+    out << c.caption;
+    out << c.content;
+    out << (int)c.context.size();
+    for(const auto &v: c.context){
+        out << QString::fromStdString(v.role) << QString::fromStdString(v.content);
+    }
+    return out;
+}
+
+inline QDataStream& operator>>(QDataStream& in, Content& c)
+{
+    in >> c.caption;
+    in >> c.content;
+    size_t ic;
+    in >> ic;
+    for(int i = 0; i < ic; ++i){
+        QString c1, c2;
+        in >> c1 >> c2;
+        common_chat_msg msg;
+        msg.role = c1.toStdString();
+        msg.content = c2.toStdString();
+        c.context.push_back(msg);
+    }
+    return in;
+}
+
+Q_DECLARE_METATYPE(Content)
 
 class LlamaWorker: public QThread
 {
@@ -44,6 +90,9 @@ public:
     bool isLoading() const { return mIsLoading; }
 
     QStringList getDevices() const;
+
+    void swapMessages(std::vector<common_chat_msg> &messages);
+    std::vector<common_chat_msg> messages() const { return mMessages; }
 
 signals:
     void loadingProgress(float);

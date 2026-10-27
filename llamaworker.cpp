@@ -77,6 +77,11 @@ QStringList LlamaWorker::getDevices() const
     return ret;
 }
 
+void LlamaWorker::swapMessages(std::vector<common_chat_msg> &messages)
+{
+    std::swap(mMessages, messages);
+}
+
 void LlamaWorker::loadModel(const QString &gguf, const Params &params)
 {
     releaseModel();
