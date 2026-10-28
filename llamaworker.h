@@ -39,8 +39,12 @@ inline QDataStream& operator>>(QDataStream& in, Content& c)
 {
     in >> c.caption;
     in >> c.content;
-    size_t ic;
+    int ic{};
     in >> ic;
+    if(ic < 0 || ic > 1e9){
+        qDebug() << "Content reading: something wrong";
+        return in;
+    }
     for(int i = 0; i < ic; ++i){
         QString c1, c2;
         in >> c1 >> c2;
@@ -88,6 +92,8 @@ public:
     bool isError() const { return mIsError; }
     bool isGen() const { return mIsGen.load(); }
     bool isLoading() const { return mIsLoading; }
+
+    float contextProgress() const;
 
     QStringList getDevices() const;
 
@@ -137,6 +143,7 @@ private:
     std::atomic_bool mIsGen;
     float mPrefillSpeed{};
     float mGenSpeed{};
+    float mContextProgress{};
 
     std::string generate(const std::string prompt);
 

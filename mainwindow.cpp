@@ -151,6 +151,8 @@ MainWindow::MainWindow(QWidget *parent)
     .arg(pal.color(QPalette::Highlight).name())
     .arg(pal.color(QPalette::HighlightedText).name());
 
+    ui->gridLayout->addWidget(&mContextIndicator, 1, 1);
+
     ui->lvTabs->setStyleSheet(style);
 }
 
@@ -164,6 +166,8 @@ MainWindow::~MainWindow()
 
 void MainWindow::on_pbLoad_clicked()
 {
+    if(!mWorker) return;
+
     LlamaWorker::Params params = mDlgConfig.params();
 
     QString modelpath = mDlgConfig.modelPath();
@@ -179,7 +183,8 @@ void MainWindow::on_pbLoad_clicked()
 
 void MainWindow::on_pbUnload_clicked()
 {
-    QMetaObject::invokeMethod(mWorker.get(), "unloadModel", Qt::QueuedConnection);
+    if(mWorker)
+        QMetaObject::invokeMethod(mWorker.get(), "unloadModel", Qt::QueuedConnection);
 }
 
 void MainWindow::onSendStatus(QString msg, bool ok)
@@ -199,13 +204,16 @@ void MainWindow::onSendStatus(QString msg, bool ok)
 
 void MainWindow::onSendPiece(QString piece)
 {
+    if(mWorker){
+        mContextIndicator.setProgress(mWorker->contextProgress());
+    }
     mTextEdit->moveCursor(QTextCursor::End);
     mTextEdit->insertPlainText(piece);
 }
 
 void MainWindow::onTimeout()
 {
-    if(mWorker->isLoading() && mIsLoading){
+    if(mWorker && mWorker->isLoading() && mIsLoading){
         mLoadingCnt = (mLoadingCnt + 1) % 4;
         QString spt = QString(".").repeated(mLoadingCnt);
         ui->lbProgress->setText("Model loading" + spt);
@@ -224,6 +232,7 @@ void MainWindow::onAppendMessage(const QString &msg)
 
 void MainWindow::on_pbSend_clicked()
 {
+    if(!mWorker) return;
     if(mWorker->isGen()){
         mWorker->stopGenerate();
         return;
@@ -262,6 +271,8 @@ void MainWindow::loadSettings()
 
 void MainWindow::saveSettings()
 {
+    saveLastSession();
+
     QList<QVariant> tabs;
     for(int i = 0; i < mTabModel.rowCount(); ++i){
 
@@ -290,7 +301,7 @@ void MainWindow::updateTabs()
 
 void MainWindow::saveLastSession()
 {
-    if(mLastRow >= 0 && mLastRow < mTabModel.rowCount()){
+    if(mWorker && mLastRow >= 0 && mLastRow < mTabModel.rowCount()){
         mCurrentContent.caption = mTabModel.item(mLastRow)->text();
         mCurrentContent.content = mTextEdit->document()->toHtml();
         mCurrentContent.context = mWorker->messages();
@@ -301,7 +312,7 @@ void MainWindow::saveLastSession()
 void MainWindow::loadItem(int row)
 {
     auto data = mTabModel.item(row)->data().value<Content>();
-    if(!data.empty()){
+    if(mWorker && !data.empty()){
         mWorker->swapMessages(data.context);
         mTextEdit->document()->setHtml(data.content);
     }

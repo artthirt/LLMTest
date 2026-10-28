@@ -63,6 +63,11 @@ LlamaWorker::~LlamaWorker()
     wait();
 }
 
+float LlamaWorker::contextProgress() const
+{
+    return mContextProgress;
+}
+
 QStringList LlamaWorker::getDevices() const
 {
     QStringList ret;
@@ -336,6 +341,8 @@ std::string LlamaWorker::generate(const std::string prompt)
         if(timeout.elapsed() > 300){
             timeout.restart();
             emit sendMessage(QString::fromStdString(response));
+
+            mContextProgress = 100. * n_cur / mParams.context;
 
             mGenSpeed = token_timer.elapsed() > 0? 1000. * tokens / token_timer.elapsed() : 0;
             emit sendStatistics(mPrefillSpeed, mGenSpeed);

@@ -17,9 +17,10 @@ find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)
 
 set(PROJECT_SOURCES
     main.cpp
-    mainwindow.cpp
-    mainwindow.h
-    mainwindow.ui
+    mainwindow.cpp mainwindow.h mainwindow.ui
+    llamaworker.h llamaworker.cpp
+    dialogconfig.h dialogconfig.cpp dialogconfig.ui
+    circularprogress.h circularprogress.cpp
 )
 
 set(GGML_NATIVE ON CACHE BOOL "" FORCE)
@@ -49,8 +50,6 @@ add_subdirectory(llama)
 
 add_executable(LLMTest
     ${PROJECT_SOURCES}
-    llamaworker.h llamaworker.cpp
-    dialogconfig.h dialogconfig.cpp dialogconfig.ui
 )
 
 target_link_libraries(LLMTest PRIVATE

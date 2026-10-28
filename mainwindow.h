@@ -7,6 +7,7 @@
 #include <QStandardItemModel>
 
 #include "dialogconfig.h"
+#include "circularprogress.h"
 
 class LlamaWorker;
 
@@ -52,6 +53,7 @@ private:
     QStandardItemModel mTabModel;
     DialogConfig mDlgConfig;
     Content mCurrentContent;
+    CircularProgress mContextIndicator;
     int mLastRow{};
 
     QTextEdit *mTextEdit{};
