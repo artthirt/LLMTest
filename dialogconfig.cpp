@@ -7,27 +7,20 @@
 #include <QFileDialog>
 #include <QFileInfo>
 
-class ResizeEventFilter : public QObject
+////////////
+ResizeEventFilter::ResizeEventFilter(QObject *parent, std::function<void ()> callback)
+    : QObject(parent), m_callback(std::move(callback))
 {
-public:
-    ResizeEventFilter(QObject *parent, std::function<void()> callback)
-        : QObject(parent), m_callback(std::move(callback))
-    {
+}
+
+bool ResizeEventFilter::eventFilter(QObject *obj, QEvent *event)
+{
+    if (event->type() == QEvent::Resize) {
+        m_callback();
     }
 
-protected:
-    bool eventFilter(QObject *obj, QEvent *event) override
-    {
-        if (event->type() == QEvent::Resize) {
-            m_callback();
-        }
-
-        return QObject::eventFilter(obj, event);
-    }
-
-private:
-    std::function<void()> m_callback;
-};
+    return QObject::eventFilter(obj, event);
+}
 
 ////////////////////////////////
 

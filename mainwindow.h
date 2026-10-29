@@ -71,5 +71,11 @@ private:
 
     void saveLastSession();
     void loadItem(int row);
+
+    void makeToolButton(QTextEdit *plainTextEdit,
+                        const QString &text,
+                        std::function<void()> fun,
+                        const QString &tooltip,
+                        int X);
 };
 #endif // MAINWINDOW_H

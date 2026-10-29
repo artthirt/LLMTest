@@ -112,6 +112,8 @@ signals:
     void modelError();
     void stopGenerated();
     void sendStatistics(float prefill, float gen);
+    void sendReasoning(QString);
+    void sendContent(QString);
 
 public slots:
     void loadModel(const QString& gguf, const LlamaWorker::Params& params);
@@ -132,6 +134,7 @@ private:
     llama_context *mCtx{};
     bool mUseThinking{true};
     common_chat_templates_ptr mChatTemplates;
+    common_chat_parser_params mSyntax;
     std::vector<common_chat_msg> mMessages;
     std::string mPreviousFormatted;
     int mPrevLen{};

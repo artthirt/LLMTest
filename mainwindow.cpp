@@ -154,6 +154,13 @@ MainWindow::MainWindow(QWidget *parent)
     ui->gridLayout->addWidget(&mContextIndicator, 1, 1);
 
     ui->lvTabs->setStyleSheet(style);
+
+    makeToolButton(mTextEdit, "❌", [this](){
+        if(mWorker){
+            mWorker->clearMessage();
+        }
+        mTextEdit->clear();
+    }, "Clear", 0);
 }
 
 MainWindow::~MainWindow()
@@ -317,6 +324,55 @@ void MainWindow::loadItem(int row)
         mTextEdit->document()->setHtml(data.content);
     }
 
+}
+
+void MainWindow::makeToolButton(QTextEdit *plainTextEdit,
+                                const QString &text, std::function<void ()> fun,
+                                const QString &tooltip, int X)
+{
+    auto *button = new QToolButton(plainTextEdit);
+    button->setText(text);
+    // button->setIcon(style()->standardIcon(
+    //     QStyle::SP_MessageBoxInformation));
+    button->setToolTip(tooltip);
+    button->setAutoRaise(true);
+    button->setFixedSize(24, 24);
+
+    button->setStyleSheet(R"(
+    QToolButton {
+        background: transparent;
+        border: none;
+    }
+    QToolButton:hover {
+        background: rgba(128, 128, 128, 40);
+        border-radius: 4px;
+    }
+    QToolButton:pressed {
+        background: rgba(128, 128, 128, 80);
+    }
+)");
+
+    QObject::connect(button, &QToolButton::clicked, this, [this, fun]() {
+        // Your action here
+        if(fun){
+            fun();
+        }
+    });
+
+    auto updatePosition = [plainTextEdit, button, X]() {
+        button->move(plainTextEdit->width() - button->width() - 8 - X, 4);
+        button->raise();
+    };
+
+    QObject::connect(plainTextEdit, &QTextEdit::textChanged,
+                     this, updatePosition); // Optional; not needed for resizing.
+
+    auto *filter = new ResizeEventFilter(
+        plainTextEdit, updatePosition);
+
+    plainTextEdit->installEventFilter(filter);
+
+    updatePosition();
 }
 
 void MainWindow::on_tbtConfig_clicked()

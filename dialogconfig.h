@@ -10,6 +10,18 @@ namespace Ui {
 class DialogConfig;
 }
 
+class ResizeEventFilter : public QObject
+{
+public:
+    ResizeEventFilter(QObject *parent, std::function<void()> callback);
+
+protected:
+    bool eventFilter(QObject *obj, QEvent *event) override;
+
+private:
+    std::function<void()> m_callback;
+};
+
 class QPlainTextEdit;
 
 class DialogConfig : public QDialog

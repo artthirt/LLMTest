@@ -235,6 +235,7 @@ void LlamaWorker::addNewMessage(const QString &system_prompt, const QString &use
     inputs.add_generation_prompt = true;
     inputs.use_jinja = true;
     inputs.enable_thinking = mUseThinking;
+    inputs.reasoning_format = COMMON_REASONING_FORMAT_AUTO;
 
     common_chat_params params;
 
@@ -247,6 +248,9 @@ void LlamaWorker::addNewMessage(const QString &system_prompt, const QString &use
     }
 
     auto formatted = params.prompt.str();
+
+    mSyntax = common_chat_parser_params(params);
+    mSyntax.parser = params.parser;
 
     auto previous_size = mPreviousFormatted.size();
     if(previous_size > formatted.size() ||
@@ -343,6 +347,15 @@ std::string LlamaWorker::generate(const std::string prompt)
             emit sendMessage(QString::fromStdString(response));
 
             mContextProgress = 100. * n_cur / mParams.context;
+
+            auto result = common_chat_parse(common_chat_input(response), true, mSyntax);
+
+            emit sendReasoning(QString::fromStdString(result.reasoning_content));
+            emit sendContent(QString::fromStdString(result.content));
+            qDebug() << "[Reasoning]:";
+            qDebug() << result.reasoning_content;
+            qDebug() << "[Content]:";
+            qDebug() << result.content;
 
             mGenSpeed = token_timer.elapsed() > 0? 1000. * tokens / token_timer.elapsed() : 0;
             emit sendStatistics(mPrefillSpeed, mGenSpeed);
