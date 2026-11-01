@@ -100,6 +100,7 @@ void LlamaWorker::loadModel(const QString &gguf, const Params &params)
 
     llama_model_params mp = llama_model_default_params();
     mp.n_gpu_layers = params.gpu_layers;
+    mp.main_gpu = params.main_gpu;
     mp.progress_callback_user_data = this;
     mp.progress_callback = [](float progress, void * user_data){
         auto own = static_cast<LlamaWorker*>(user_data);

@@ -8,26 +8,54 @@
 #include <QDataStream>
 #include <llama.h>
 #include <atomic>
+#include <QTextDocument>
+#include <qtextcursor.h>
 
 class Content{
 public:
     QString caption;
-    QString content;
+    //QString content;
     std::vector<common_chat_msg> context;
-    bool empty() const { return content.isEmpty() && context.empty(); }
+
+    QSharedPointer<QTextDocument> _formatted;
+
+    bool empty() const { return !_formatted || _formatted->isEmpty(); }
+
+    QTextDocument *doc(){
+        if(!_formatted) _formatted.reset(new QTextDocument);
+        return _formatted.get();
+    }
+    void setHtml(const QString& html){
+        doc()->setHtml(html);
+    }
+    QString toHtml() const{
+        if(_formatted) return _formatted->toHtml();
+        return {};
+    }
+    void insertPlainText(const QString &text){
+        QTextCursor cursor(doc());
+        cursor.movePosition(QTextCursor::End);
+        cursor.insertText(text);
+    }
+    void insertHtml(const QString &html)
+    {
+        QTextCursor cursor(doc());
+        cursor.movePosition(QTextCursor::End);
+        cursor.insertHtml(html);
+    }
 
     QVariant toVariant() const{
         return QVariant::fromValue(*this);
     }
     static Content fromVariant(const QVariant& v){
         return v.value<Content>();
-    }
+    }    
 };
 
 inline QDataStream& operator<<(QDataStream& out, const Content& c)
 {
     out << c.caption;
-    out << c.content;
+    out << c.toHtml();
     out << (int)c.context.size();
     for(const auto &v: c.context){
         out << QString::fromStdString(v.role) << QString::fromStdString(v.content);
@@ -38,7 +66,9 @@ inline QDataStream& operator<<(QDataStream& out, const Content& c)
 inline QDataStream& operator>>(QDataStream& in, Content& c)
 {
     in >> c.caption;
-    in >> c.content;
+    QString content;
+    in >> content;
+    c.setHtml(content);
     int ic{};
     in >> ic;
     if(ic < 0 || ic > 1e9){
@@ -66,7 +96,8 @@ public:
         int context{8192};
         int maxtoken{7000};
         int gpu_layers{-1};
-        int n_batch{512};
+        int n_batch{2048};
+        int main_gpu{0};
 
         bool enable_thinking{false};
 

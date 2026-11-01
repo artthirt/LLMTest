@@ -116,6 +116,7 @@ void DialogConfig::loadSettings()
     ui->dsbTemp->setValue(mSetts.value("temp", 0.8).toDouble());
     ui->pteSystemPrompt->setPlainText(mSetts.value("system_prompt").toString());
     ui->chbThinking->setChecked(mSetts.value("thinking").toBool());
+    ui->sbMainGPU->setValue(mSetts.value("main_gpu", 0).toInt());
 
     updateParams();
 }
@@ -128,6 +129,7 @@ void DialogConfig::saveSettings()
     mSetts.setValue("temp", ui->dsbTemp->value());
     mSetts.setValue("system_prompt", ui->pteSystemPrompt->toPlainText());
     mSetts.setValue("thinking", ui->chbThinking->isChecked());
+    mSetts.setValue("main_gpu", ui->sbMainGPU->value());
 }
 
 void DialogConfig::updateParams()
@@ -137,6 +139,7 @@ void DialogConfig::updateParams()
     mParams.temp = ui->dsbTemp->value();
     mParams.system_prompt = ui->pteSystemPrompt->toPlainText();
     mParams.enable_thinking = ui->chbThinking->isChecked();
+    mParams.main_gpu = ui->sbMainGPU->value();
 }
 
 void DialogConfig::on_buttonBox_accepted()
@@ -146,6 +149,7 @@ void DialogConfig::on_buttonBox_accepted()
     mParams.temp = ui->dsbTemp->value();
     mParams.system_prompt = ui->pteSystemPrompt->toPlainText();
     mParams.enable_thinking = ui->chbThinking->isChecked();
+    mParams.main_gpu = ui->sbMainGPU->value();
 
     auto spl = ui->leSplitted->text().split(",");
     QVector<float> vspl;

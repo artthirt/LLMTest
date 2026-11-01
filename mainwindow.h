@@ -52,9 +52,10 @@ private:
     Ui::MainWindow *ui;
     QStandardItemModel mTabModel;
     DialogConfig mDlgConfig;
-    Content mCurrentContent;
+    std::map<int, Content> mCurrentContent;
     CircularProgress mContextIndicator;
     int mLastRow{};
+    int mSessionId{};
 
     QTextEdit *mTextEdit{};
 
@@ -69,7 +70,6 @@ private:
 
     void updateTabs();
 
-    void saveLastSession();
     void loadItem(int row);
 
     void makeToolButton(QTextEdit *plainTextEdit,

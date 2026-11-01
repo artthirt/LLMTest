@@ -78,7 +78,17 @@
          </widget>
         </item>
         <item>
-         <widget class="QListView" name="lvTabs"/>
+         <widget class="QListView" name="lvTabs">
+          <property name="frameShape">
+           <enum>QFrame::Shape::NoFrame</enum>
+          </property>
+          <property name="frameShadow">
+           <enum>QFrame::Shadow::Plain</enum>
+          </property>
+          <property name="lineWidth">
+           <number>0</number>
+          </property>
+         </widget>
         </item>
        </layout>
       </widget>
@@ -150,7 +160,7 @@
      <x>0</x>
      <y>0</y>
      <width>772</width>
-     <height>21</height>
+     <height>25</height>
     </rect>
    </property>
   </widget>

@@ -59,6 +59,7 @@ MainWindow::MainWindow(QWidget *parent)
     }, Qt::QueuedConnection);
 
     connect(mWorker.get(), &LlamaWorker::generateFinished, this, [this](){
+
     }, Qt::QueuedConnection);
 
     connect(mWorker.get(), &LlamaWorker::sendPiece, this, &MainWindow::onSendPiece);
@@ -116,7 +117,7 @@ MainWindow::MainWindow(QWidget *parent)
     QListView {
         background-color: %1;
         color: %2;
-        border: 1px solid %3;
+        border: none;
         outline: none;
     }
 
@@ -144,7 +145,7 @@ MainWindow::MainWindow(QWidget *parent)
         border-right: 1px solid #ffffff;
     }
     )")
-    .arg(pal.color(QPalette::Base).name())
+    .arg(pal.color(QPalette::Window).name())
     .arg(pal.color(QPalette::Text).name())
     .arg(pal.color(QPalette::Mid).name())
     .arg(pal.color(QPalette::AlternateBase).name())
@@ -203,8 +204,11 @@ void MainWindow::onSendStatus(QString msg, bool ok)
         font = "<span style='color:red;'>[System]> %1</span><br>";
     }
     html = font.arg(msg);
-    mTextEdit->moveCursor(QTextCursor::End);
-    mTextEdit->insertHtml(html);
+    mCurrentContent[mSessionId].insertHtml(html);
+    if(mSessionId == mLastRow){
+        mTextEdit->moveCursor(QTextCursor::End);
+        mTextEdit->insertHtml(html);
+    }
     ui->statusbar->setStyleSheet(ok? "color: green;" : "color: red;");
     ui->statusbar->showMessage(msg);
 }
@@ -214,8 +218,11 @@ void MainWindow::onSendPiece(QString piece)
     if(mWorker){
         mContextIndicator.setProgress(mWorker->contextProgress());
     }
-    mTextEdit->moveCursor(QTextCursor::End);
-    mTextEdit->insertPlainText(piece);
+    mCurrentContent[mSessionId].insertPlainText(piece);
+    if(mLastRow == mSessionId){
+        mTextEdit->moveCursor(QTextCursor::End);
+        mTextEdit->insertPlainText(piece);
+    }
 }
 
 void MainWindow::onTimeout()
@@ -233,8 +240,10 @@ void MainWindow::onAppendMessage(const QString &msg)
         onSendStatus("Message is empty", false);
         return;
     }
+    auto res = "<span style='color:#aea;'><i>[User]> " + msg + "</i></span><br>";
     mTextEdit->moveCursor(QTextCursor::End);
-    mTextEdit->insertHtml("<span style='color:#aea;'><i>[User]> " + msg + "</i></span><br>");
+    mTextEdit->insertHtml(res);
+    mCurrentContent[mSessionId].insertHtml(res);
 }
 
 void MainWindow::on_pbSend_clicked()
@@ -251,6 +260,8 @@ void MainWindow::on_pbSend_clicked()
         return;
     }
     auto sys = mDlgConfig.systemPrompt();
+
+    mSessionId = mLastRow;
 
     onAppendMessage(msg);
 
@@ -271,6 +282,11 @@ void MainWindow::loadSettings()
         auto *item = new QStandardItem(c.caption);
         item->setData(QVariant::fromValue<Content>(c));
         mTabModel.appendRow(item);
+        int id = mTabModel.rowCount() - 1;
+        mCurrentContent[id] = c;
+    }
+    if(!tabsList.empty()){
+        loadItem(0);
     }
 
     mDlgConfig.loadSettings();
@@ -278,16 +294,11 @@ void MainWindow::loadSettings()
 
 void MainWindow::saveSettings()
 {
-    saveLastSession();
 
     QList<QVariant> tabs;
-    for(int i = 0; i < mTabModel.rowCount(); ++i){
-
-        auto item = mTabModel.item(i, 0);
-        auto text = item->text();
-        auto content = item->data().value<Content>();
-        content.caption = text;
-        tabs.append(QVariant::fromValue<Content>(content));
+    for(const auto &kv: mCurrentContent){
+        auto item = kv.second;
+        tabs.append(QVariant::fromValue<Content>(item));
     }
     mDlgConfig.settings()->setValue("tabs_list", tabs);
 
@@ -306,24 +317,14 @@ void MainWindow::updateTabs()
     }
 }
 
-void MainWindow::saveLastSession()
-{
-    if(mWorker && mLastRow >= 0 && mLastRow < mTabModel.rowCount()){
-        mCurrentContent.caption = mTabModel.item(mLastRow)->text();
-        mCurrentContent.content = mTextEdit->document()->toHtml();
-        mCurrentContent.context = mWorker->messages();
-        mTabModel.item(mLastRow)->setData(QVariant::fromValue<Content>(mCurrentContent));
-    }
-}
-
 void MainWindow::loadItem(int row)
 {
-    auto data = mTabModel.item(row)->data().value<Content>();
+    Content data = mCurrentContent[row];
     if(mWorker && !data.empty()){
         mWorker->swapMessages(data.context);
-        mTextEdit->document()->setHtml(data.content);
+        //mTextEdit->document()->setHtml(data.content);
+        mTextEdit->setHtml(data.toHtml());
     }
-
 }
 
 void MainWindow::makeToolButton(QTextEdit *plainTextEdit,
@@ -386,19 +387,19 @@ void MainWindow::on_pbNewSession_clicked()
     if(dlg.exec()){
         auto name = dlg.sessionName();
         mTabModel.appendRow(new QStandardItem(name));
-        saveLastSession();
-
+        mLastRow = mSessionId = mTabModel.rowCount() - 1;
+        mCurrentContent[mSessionId].caption = name;
+        ui->lvTabs->setCurrentIndex(mTabModel.index(mSessionId, 0));
+        mTextEdit->clear();
     }
 }
 
 void MainWindow::on_lvTabs_clicked(const QModelIndex &index)
 {
     if(mLastRow != index.row()){
-
-        saveLastSession();
-
+        mTextEdit->clear();
         loadItem(index.row());
-        mLastRow = index.row();
     }
+    mLastRow = index.row();
 }
 
