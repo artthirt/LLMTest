@@ -2,6 +2,7 @@
 #include "chat.h"
 
 #include <QElapsedTimer>
+#include <QTimer>
 
 //////////////////////////
 
@@ -209,12 +210,34 @@ void LlamaWorker::clearMessage()
     mMessages = {};
 }
 
-void LlamaWorker::addNewMessage(const QString &system_prompt, const QString &user)
+void LlamaWorker::addNewMessage(QString system_prompt, QString user)
 {
     if(!mModel || !mCtx){
         emit sendStatus("Model is not loaded or context is not init", false);
         return;
     }
+    if(user.isEmpty() && mUserQueue.empty()){
+        return;
+    }
+
+    {
+        if(mIsGen.load() || !mUserQueue.empty()){
+            if(!user.isEmpty())
+                mUserQueue.push({system_prompt, user});
+            QTimer::singleShot(1000, [this](){
+                addNewMessage({}, {});
+            });
+            return;
+        }
+
+        if(!mUserQueue.empty()){
+            auto [s, u] = mUserQueue.front();
+            mUserQueue.pop();
+            system_prompt = s;
+            user = u;
+        }
+    }
+
     common_chat_templates_inputs inputs;
 
     mIsGen.exchange(true);
@@ -312,7 +335,7 @@ std::string LlamaWorker::generate(const std::string prompt)
     QElapsedTimer token_timer, timeout;
     token_timer.start();
 
-    auto is_first = llama_memory_seq_pos_max(llama_get_memory(mCtx), 0) == -1;
+    //auto is_first = llama_memory_seq_pos_max(llama_get_memory(mCtx), 0) == -1;
 
     llama_token n_cur;
 
@@ -321,6 +344,12 @@ std::string LlamaWorker::generate(const std::string prompt)
     }
 
     std::string piece;
+
+    auto generationResult = [this](const std::string &response, bool v){
+        auto result = common_chat_parse(common_chat_input(response), v, mSyntax);
+        emit sendReasoning(QString::fromStdString(result.reasoning_content).trimmed());
+        emit sendContent(QString::fromStdString(result.content).trimmed());
+};
 
     int tokens = 0;
     timeout.start();
@@ -343,20 +372,13 @@ std::string LlamaWorker::generate(const std::string prompt)
             emit sendPiece(QString::fromStdString(piece));
             response += piece;
         }
-        if(timeout.elapsed() > 300){
+        if(timeout.elapsed() > 100){
             timeout.restart();
             emit sendMessage(QString::fromStdString(response));
 
             mContextProgress = 100. * n_cur / mParams.context;
 
-            auto result = common_chat_parse(common_chat_input(response), true, mSyntax);
-
-            emit sendReasoning(QString::fromStdString(result.reasoning_content));
-            emit sendContent(QString::fromStdString(result.content));
-            qDebug() << "[Reasoning]:";
-            qDebug() << result.reasoning_content;
-            qDebug() << "[Content]:";
-            qDebug() << result.content;
+            generationResult(response, true);
 
             mGenSpeed = token_timer.elapsed() > 0? 1000. * tokens / token_timer.elapsed() : 0;
             emit sendStatistics(mPrefillSpeed, mGenSpeed);
@@ -386,11 +408,11 @@ std::string LlamaWorker::generate(const std::string prompt)
         emit sendMessage(QString::fromStdString(response));
     }
 
+    generationResult(response, false);
+
     if(mStop.load()){
         emit stopGenerated();
     }
-
-    emit sendPiece("\n");
 
     emit sendMessage(QString::fromStdString(response));
     emit generateFinished();

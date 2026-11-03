@@ -6,6 +6,7 @@
 #include <QTimer>
 #include <QStandardItemModel>
 
+#include "chatwidget.h"
 #include "dialogconfig.h"
 #include "circularprogress.h"
 
@@ -48,16 +49,28 @@ private slots:
 
     void on_lvTabs_clicked(const QModelIndex &index);
 
+    void onSendReasoning(QString text);
+    void onSendContent(QString);
+    void onGenerationFinished();
+
+    void on_pbClearAll_clicked();
+
+    void on_lvTabs_doubleClicked(const QModelIndex &index);
+
+protected:
+    bool eventFilter(QObject *watched, QEvent *event) override;
+
 private:
     Ui::MainWindow *ui;
     QStandardItemModel mTabModel;
     DialogConfig mDlgConfig;
-    std::map<int, Content> mCurrentContent;
+    //std::map<int, Content> mCurrentContent;
+    std::map<int, ChatWidget*> mChatWidgets;
     CircularProgress mContextIndicator;
     int mLastRow{};
     int mSessionId{};
 
-    QTextEdit *mTextEdit{};
+    //QTextEdit *mTextEdit{};
 
     QTimer mTimer;
     bool mIsLoading{};
@@ -65,12 +78,15 @@ private:
 
     std::unique_ptr<LlamaWorker> mWorker;
 
+    void sendMessage();
+
     void loadSettings();
     void saveSettings();
 
     void updateTabs();
 
     void loadItem(int row);
+    void addNewSession(int sessId, Content &&c);
 
     void makeToolButton(QTextEdit *plainTextEdit,
                         const QString &text,

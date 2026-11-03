@@ -47,10 +47,12 @@ MainWindow::MainWindow(QWidget *parent)
 
     ui->setupUi(this);
 
-    mTextEdit = new QTextEdit;
-    ui->vlTextEdit->addWidget(mTextEdit);
+    //mTextEdit = new QTextEdit;
+    //ui->vlTextEdit->addWidget(mTextEdit);
+    //ui->vlTextEdit->addWidget(&mChatView);
+    ui->pteMsg->installEventFilter(this);
 
-    ui->mainSplitter->setSizes({600, 100});
+    ui->mainSplitter->setSizes({700, 100});
 
     mWorker.reset(new LlamaWorker);
 
@@ -58,9 +60,10 @@ MainWindow::MainWindow(QWidget *parent)
 
     }, Qt::QueuedConnection);
 
-    connect(mWorker.get(), &LlamaWorker::generateFinished, this, [this](){
+    connect(mWorker.get(), &LlamaWorker::sendContent, this, &MainWindow::onSendContent, Qt::QueuedConnection);
+    connect(mWorker.get(), &LlamaWorker::sendReasoning, this, &MainWindow::onSendReasoning, Qt::QueuedConnection);
 
-    }, Qt::QueuedConnection);
+    connect(mWorker.get(), &LlamaWorker::generateFinished, this, &MainWindow::onGenerationFinished, Qt::QueuedConnection);
 
     connect(mWorker.get(), &LlamaWorker::sendPiece, this, &MainWindow::onSendPiece);
     connect(mWorker.get(), &LlamaWorker::modelLoaded, this, [this](){
@@ -104,7 +107,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     mDlgConfig.setDevices(mWorker->getDevices());
 
-    ui->splitter->setSizes({1, 3});
+    ui->leftSplitter->setSizes({100, 500});
     //onAppendMessage("Test Messsage");
     //onSendPiece("Test Answer\n");
     QPalette pal = ui->lvTabs->palette();
@@ -156,12 +159,12 @@ MainWindow::MainWindow(QWidget *parent)
 
     ui->lvTabs->setStyleSheet(style);
 
-    makeToolButton(mTextEdit, "❌", [this](){
-        if(mWorker){
-            mWorker->clearMessage();
-        }
-        mTextEdit->clear();
-    }, "Clear", 0);
+    // makeToolButton(mTextEdit, "❌", [this](){
+    //     if(mWorker){
+    //         mWorker->clearMessage();
+    //     }
+    //     mTextEdit->clear();
+    // }, "Clear", 0);
 }
 
 MainWindow::~MainWindow()
@@ -170,6 +173,51 @@ MainWindow::~MainWindow()
 
     mWorker.reset();
     delete ui;
+}
+
+bool MainWindow::eventFilter(QObject *watched, QEvent *event)
+{
+    if(ui->pteMsg == watched && event->type() == QEvent::KeyPress){
+        auto *key = static_cast<QKeyEvent*>(event);
+        if(key && (key->key() == Qt::Key_Return || key->key() == Qt::Key_Enter)
+            && (key->modifiers() & Qt::ShiftModifier) == 0){
+            sendMessage();
+            return true;
+        }
+    }
+    return QMainWindow::eventFilter(watched, event);
+}
+
+void MainWindow::sendMessage()
+{
+    if(mChatWidgets.empty()) return;
+
+    if(!mWorker) return;
+    if(mWorker->isGen()){
+        mWorker->stopGenerate();
+        ui->pbSend->setText("Send");
+        return;
+    }
+
+    auto msg = ui->pteMsg->toPlainText();
+    if(msg.isEmpty()){
+        onSendStatus("Message is empty", false);
+        ui->pbSend->setText("Send");
+        return;
+    }
+    auto sys = mDlgConfig.systemPrompt();
+
+    mSessionId = mLastRow;
+
+    onAppendMessage(msg);
+
+    QMetaObject::invokeMethod(mWorker.get(), "addNewMessage", Qt::QueuedConnection,
+                              Q_ARG(QString, sys),
+                              Q_ARG(QString, msg));
+
+    ui->pteMsg->clear();
+
+    ui->pbSend->setText("Stop");
 }
 
 void MainWindow::on_pbLoad_clicked()
@@ -204,10 +252,10 @@ void MainWindow::onSendStatus(QString msg, bool ok)
         font = "<span style='color:red;'>[System]> %1</span><br>";
     }
     html = font.arg(msg);
-    mCurrentContent[mSessionId].insertHtml(html);
+    //mCurrentContent[mSessionId].insertHtml(html);
     if(mSessionId == mLastRow){
-        mTextEdit->moveCursor(QTextCursor::End);
-        mTextEdit->insertHtml(html);
+        //mTextEdit->moveCursor(QTextCursor::End);
+        //mTextEdit->insertHtml(html);
     }
     ui->statusbar->setStyleSheet(ok? "color: green;" : "color: red;");
     ui->statusbar->showMessage(msg);
@@ -218,10 +266,10 @@ void MainWindow::onSendPiece(QString piece)
     if(mWorker){
         mContextIndicator.setProgress(mWorker->contextProgress());
     }
-    mCurrentContent[mSessionId].insertPlainText(piece);
+    //mCurrentContent[mSessionId].insertPlainText(piece);
     if(mLastRow == mSessionId){
-        mTextEdit->moveCursor(QTextCursor::End);
-        mTextEdit->insertPlainText(piece);
+        //mTextEdit->moveCursor(QTextCursor::End);
+        //mTextEdit->insertPlainText(piece);
     }
 }
 
@@ -240,50 +288,28 @@ void MainWindow::onAppendMessage(const QString &msg)
         onSendStatus("Message is empty", false);
         return;
     }
-    auto res = "<span style='color:#aea;'><i>[User]> " + msg + "</i></span><br>";
-    mTextEdit->moveCursor(QTextCursor::End);
-    mTextEdit->insertHtml(res);
-    mCurrentContent[mSessionId].insertHtml(res);
+    //auto res = "<span style='color:#aea;'><i>[User]> " + msg + "</i></span><br>";
+    //mTextEdit->moveCursor(QTextCursor::End);
+    //mTextEdit->insertHtml(res);
+    mChatWidgets[mLastRow]->addUser(msg);
+    //mCurrentContent[mSessionId].insertHtml(res);
 }
 
 void MainWindow::on_pbSend_clicked()
 {
-    if(!mWorker) return;
-    if(mWorker->isGen()){
-        mWorker->stopGenerate();
-        return;
-    }
-
-    auto msg = ui->pteMsg->toPlainText();
-    if(msg.isEmpty()){
-        onSendStatus("Message is empty", false);
-        return;
-    }
-    auto sys = mDlgConfig.systemPrompt();
-
-    mSessionId = mLastRow;
-
-    onAppendMessage(msg);
-
-    QMetaObject::invokeMethod(mWorker.get(), "addNewMessage", Qt::QueuedConnection,
-                              Q_ARG(QString, sys),
-                              Q_ARG(QString, msg));
-
-    ui->pteMsg->clear();
-
-    ui->pbSend->setText("Stop");
+    sendMessage();
 }
 
 void MainWindow::loadSettings()
 {
-    auto tabsList = mDlgConfig.settings()->value("tabs_list").toList();
-    for(auto v: tabsList){
+    auto tabsList = mDlgConfig.settings()->value("tabs_list_v").toList();
+    for(const auto &v: tabsList){
         auto c = v.value<Content>();
         auto *item = new QStandardItem(c.caption);
-        item->setData(QVariant::fromValue<Content>(c));
         mTabModel.appendRow(item);
         int id = mTabModel.rowCount() - 1;
-        mCurrentContent[id] = c;
+        addNewSession(id, std::move(c));
+        //mCurrentContent[id] = c;
     }
     if(!tabsList.empty()){
         loadItem(0);
@@ -294,13 +320,12 @@ void MainWindow::loadSettings()
 
 void MainWindow::saveSettings()
 {
-
     QList<QVariant> tabs;
-    for(const auto &kv: mCurrentContent){
+    for(const auto &kv: mChatWidgets){
         auto item = kv.second;
-        tabs.append(QVariant::fromValue<Content>(item));
+        tabs.append(QVariant::fromValue<Content>(item->content()));
     }
-    mDlgConfig.settings()->setValue("tabs_list", tabs);
+    mDlgConfig.settings()->setValue("tabs_list_v", tabs);
 
     mDlgConfig.saveSettings();
 }
@@ -308,9 +333,12 @@ void MainWindow::saveSettings()
 void MainWindow::updateTabs()
 {
     if(mTabModel.rowCount() == 0){
-        mTabModel.appendRow(new QStandardItem("New Session"));
+        auto name = "New Session";
+        mTabModel.appendRow(new QStandardItem(name));
         auto index = mTabModel.indexFromItem(mTabModel.item(0));
         ui->lvTabs->setCurrentIndex(index);
+        Content c{name};
+        addNewSession(index.row(), std::move(c));
     }else{
         ui->lvTabs->setCurrentIndex(mTabModel.index(0, 0));
         loadItem(0);
@@ -319,11 +347,13 @@ void MainWindow::updateTabs()
 
 void MainWindow::loadItem(int row)
 {
-    Content data = mCurrentContent[row];
+    Content &data = mChatWidgets[row]->content();
     if(mWorker && !data.empty()){
         mWorker->swapMessages(data.context);
         //mTextEdit->document()->setHtml(data.content);
-        mTextEdit->setHtml(data.toHtml());
+        //mTextEdit->setHtml(data.toHtml());
+        mChatWidgets[row]->chat().setFromJson(data.json);
+        ui->swChats->setCurrentIndex(mChatWidgets[row]->indexW());
     }
 }
 
@@ -388,18 +418,72 @@ void MainWindow::on_pbNewSession_clicked()
         auto name = dlg.sessionName();
         mTabModel.appendRow(new QStandardItem(name));
         mLastRow = mSessionId = mTabModel.rowCount() - 1;
-        mCurrentContent[mSessionId].caption = name;
+        //mCurrentContent[mSessionId].caption = name;
         ui->lvTabs->setCurrentIndex(mTabModel.index(mSessionId, 0));
-        mTextEdit->clear();
+        //mTextEdit->clear();
+        Content c;
+        c.caption = name;
+        addNewSession(mSessionId, std::move(c));
     }
+}
+
+void MainWindow::on_lvTabs_doubleClicked(const QModelIndex &index)
+{
+    if(index.isValid()){
+        DialogSession dlg;
+        if(dlg.exec()){
+            auto name = dlg.sessionName();
+            mTabModel.item(index.row())->setText(name);
+            mChatWidgets[index.row()]->content().caption = name;
+        }
+    }
+}
+
+void MainWindow::addNewSession(int sessId, Content &&c)
+{
+    mChatWidgets[sessId] = new ChatWidget();
+    mChatWidgets[sessId]->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    auto *w = mChatWidgets[sessId];
+    w->content() = std::move(c);
+    auto id = ui->swChats->addWidget(w);
+    w->setIndexW(id);
+    ui->swChats->setCurrentIndex(id);
 }
 
 void MainWindow::on_lvTabs_clicked(const QModelIndex &index)
 {
     if(mLastRow != index.row()){
-        mTextEdit->clear();
+        //mTextEdit->clear();
         loadItem(index.row());
     }
     mLastRow = index.row();
 }
+
+void MainWindow::onSendReasoning(QString text)
+{
+    mChatWidgets[mSessionId]->onSendReasoning(text);
+}
+
+void MainWindow::onSendContent(QString text)
+{
+    mChatWidgets[mSessionId]->onSendContent(text);
+}
+
+void MainWindow::onGenerationFinished()
+{
+    mChatWidgets[mSessionId]->content().context = mWorker->messages();
+    mChatWidgets[mSessionId]->generationFinished();
+}
+
+void MainWindow::on_pbClearAll_clicked()
+{
+    for(auto &kv: mChatWidgets){
+        ui->swChats->removeWidget(kv.second);
+        kv.second->deleteLater();
+        kv.second = nullptr;
+    }
+    mTabModel.clear();
+    mChatWidgets.clear();
+}
+
 

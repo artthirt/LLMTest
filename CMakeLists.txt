@@ -21,6 +21,7 @@ set(PROJECT_SOURCES
     llamaworker.h llamaworker.cpp
     dialogconfig.h dialogconfig.cpp dialogconfig.ui
     circularprogress.h circularprogress.cpp
+    chatview.h chatview.cpp
 )
 
 set(GGML_NATIVE ON CACHE BOOL "" FORCE)
@@ -50,6 +51,7 @@ add_subdirectory(llama)
 
 add_executable(LLMTest
     ${PROJECT_SOURCES}
+    chatwidget.h chatwidget.cpp chatwidget.ui
 )
 
 target_link_libraries(LLMTest PRIVATE

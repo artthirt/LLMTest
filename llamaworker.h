@@ -9,17 +9,20 @@
 #include <llama.h>
 #include <atomic>
 #include <QTextDocument>
+#include <QJsonObject>
 #include <qtextcursor.h>
+#include <queue>
 
 class Content{
 public:
     QString caption;
     //QString content;
+    QByteArray json;
     std::vector<common_chat_msg> context;
 
     QSharedPointer<QTextDocument> _formatted;
 
-    bool empty() const { return !_formatted || _formatted->isEmpty(); }
+    bool empty() const { return json.isEmpty(); }
 
     QTextDocument *doc(){
         if(!_formatted) _formatted.reset(new QTextDocument);
@@ -60,6 +63,7 @@ inline QDataStream& operator<<(QDataStream& out, const Content& c)
     for(const auto &v: c.context){
         out << QString::fromStdString(v.role) << QString::fromStdString(v.content);
     }
+    out << c.json;
     return out;
 }
 
@@ -83,6 +87,7 @@ inline QDataStream& operator>>(QDataStream& in, Content& c)
         msg.content = c2.toStdString();
         c.context.push_back(msg);
     }
+    in >> c.json;
     return in;
 }
 
@@ -151,7 +156,7 @@ public slots:
     void unloadModel();
     void releaseModel();
     void clearMessage();
-    void addNewMessage(const QString& system_prompt, const QString& user);
+    void addNewMessage(QString system_prompt, QString user);
     void stopGenerate();
     void _onUpdateProgress(float val);
 
@@ -178,6 +183,7 @@ private:
     float mPrefillSpeed{};
     float mGenSpeed{};
     float mContextProgress{};
+    std::queue< std::tuple<QString, QString> > mUserQueue;
 
     std::string generate(const std::string prompt);
 
