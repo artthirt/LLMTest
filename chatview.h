@@ -8,6 +8,7 @@
 #include <memory>
 
 class QTextLayout;
+class QTextDocument;
 
 struct Style{
     bool bold{};
@@ -30,7 +31,9 @@ struct Block{
     int height{};
     bool selected{};
     bool hide{};
-    std::vector<std::unique_ptr<QTextLayout>> layouts;
+    bool formatted{};
+    //std::vector<std::unique_ptr<QTextLayout>> layouts;
+    std::unique_ptr<QTextDocument> doc;
 };
 
 class ChatView: public QAbstractScrollArea
@@ -51,6 +54,7 @@ public:
     void clearContent();
     void setContent(ID id, const QString& text);
     void relayout();
+    void finalize(ID id);
 
     bool leapToBottom() const {return mLeapToBottom; }
     void setLeapToBottom(bool v);
@@ -71,7 +75,7 @@ private:
     std::vector<Block> mBlocks;
     int mMargin{4};
     int mPadding{8};
-    int mGap{2};
+    int mGap{4};
     int mContentWidth{};
     int mContentHeight{};
     QColor mBackground{Qt::darkGray};
@@ -91,7 +95,9 @@ private:
     void applyStyle(QPainter &p, const QRect& r, const Style &style);
     void handlePress(QMouseEvent* me);
     Style getStyle(Block::Type type);
-    std::unique_ptr<QTextLayout> makeLayout(const QString& text, const QFont &f, int maxText, int &width_, int &textHeight);
+    std::unique_ptr<QTextLayout> makeLayout(const QString& text, const QFont &f,
+                                            int maxText, int &width_, int &textHeight);
+    void makeDocument(Block& b, const QFont& f, int maxText);
 };
 
 #endif // CHATVIEW_H

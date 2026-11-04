@@ -38,7 +38,7 @@ private:
 
     Content mContent;
     ChatView mChatView;
-    int mChatReasonongId{-1};
+    int mChatReasoningId{-1};
     int mChatContentId{-1};
 
 };

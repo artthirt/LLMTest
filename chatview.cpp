@@ -9,6 +9,9 @@
 #include <qclipboard.h>
 #include <qmenu.h>
 
+#include <chrono>
+#include <qtimer.h>
+
 ChatView::ChatView(QWidget *parent): QAbstractScrollArea(parent)
 {
     {
@@ -66,6 +69,15 @@ void ChatView::setContent(ID id, const QString &text)
     }
 }
 
+void ChatView::finalize(ID id)
+{
+    if(id >= 0 && id < mBlocks.size()){
+        qDebug() << "finalize" << id;
+        mBlocks[id].formatted = true;
+        relayout();
+    }
+}
+
 void ChatView::resizeEvent(QResizeEvent *event)
 {
     relayout();
@@ -74,6 +86,9 @@ void ChatView::resizeEvent(QResizeEvent *event)
 
 void ChatView::paintEvent(QPaintEvent *event)
 {
+    static auto start = std::chrono::steady_clock::now();
+    auto lstart = std::chrono::steady_clock::now();
+
     QPainter painter(viewport());
 
     painter.fillRect(event->rect(), mBackground);
@@ -99,15 +114,35 @@ void ChatView::paintEvent(QPaintEvent *event)
         QRect r(0, 0, b.width + 2 * mPadding, b.height);
         applyStyle(painter, r, getStyle(b.type));
 
-        int ty = mPadding;
-        for(const auto &l: b.layouts){
-            for(int i = 0; i < l->lineCount(); ++i){
-                auto l_ = l->lineAt(i);
-                l_.draw(&painter, QPointF(mPadding, ty));
-                ty += l_.height();
-            }
+        //int ty = mPadding;
+        if(b.doc){
+            painter.save();
+            painter.translate(mPadding, mPadding);
+            b.doc->drawContents(&painter, QRectF(0, 0, b.width, b.height - 2 * mPadding));
+            painter.restore();
         }
+        // for(const auto &l: b.layouts){
+        //     for(int i = 0; i < l->lineCount(); ++i){
+        //         auto l_ = l->lineAt(i);
+        //         l_.draw(&painter, QPointF(mPadding, ty));
+        //         ty += l_.height();
+        //     }
+        // }
         painter.restore();
+    }
+
+    auto ddur = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count();
+    static int frames{};
+    static int accddur{};
+    accddur += std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - lstart).count();
+    frames++;
+    if(ddur > 1000){
+        auto fps = 1000.f * frames / ddur;
+        float avg = frames > 0? accddur / frames : 0;
+        qDebug() << "FPS(repaint) =" << fps << " | avg(repaint, ms) = " << avg/1000.f;
+        frames = 0;
+        accddur = 0;
+        start = std::chrono::steady_clock::now();
     }
 }
 
@@ -125,6 +160,9 @@ bool ChatView::viewportEvent(QEvent *event)
             QMenu menu(viewport());
             menu.addAction(tr("Copy"), this, [text = mBlocks[index].text] {
                 QApplication::clipboard()->setText(text);
+            });
+            menu.addAction(tr("To markdown"), this, [this, index] {
+                finalize(index);
             });
             menu.exec(ce->globalPos());
         }else{
@@ -160,7 +198,7 @@ void ChatView::handlePress(QMouseEvent *me)
     }
     if(index >= 0 && index < mBlocks.size()){
         mBlocks[index].selected = true;
-        if(mBlocks[index].type == Block::Reasoning){
+        if(me->button() == Qt::LeftButton && mBlocks[index].type == Block::Reasoning){
             mBlocks[index].hide = !mBlocks[index].hide;
             relayout();
         }
@@ -208,12 +246,14 @@ ChatView::ID ChatView::addBlock(Block::Type type, const QString &text)
 
 void ChatView::relayout()
 {
-    for(Block& b: mBlocks){
-        relayoutBlock(b);
-    }
-    reposition();
-    updateScrollbar();
-    viewport()->update();
+    QTimer::singleShot(0, [this](){
+        for(Block& b: mBlocks){
+            relayoutBlock(b);
+        }
+        reposition();
+        updateScrollbar();
+        viewport()->update();
+    });
 }
 
 void ChatView::setLeapToBottom(bool v)
@@ -244,6 +284,7 @@ QJsonObject ChatView::toJson() const
         QJsonObject o;
         o["text"] = b.text;
         o["type"] = b.type;
+        o["formatted"] = b.formatted;
         arr.append(o);
     }
 
@@ -287,6 +328,7 @@ void ChatView::setFromJson(const QJsonObject &obj)
         Block b;
         b.text = o["text"].toString();
         b.type = (Block::Type)o["type"].toInt();
+        b.formatted = o["formatted"].toBool();
         mBlocks.push_back(std::move(b));
     }
     relayout();
@@ -315,7 +357,7 @@ void ChatView::relayoutBlock(Block &b)
     int w = width() - 2 * mMargin;
     int maxText = w - w * mEmptySpaceMessage;
 
-    b.layouts.clear();
+    //b.layouts.clear();
 
     auto style = getStyle(b.type);
 
@@ -325,20 +367,22 @@ void ChatView::relayoutBlock(Block &b)
     f.setItalic(style.italic);
 
     QFontMetricsF fm(font());
-    int textHeight{};
-    int width_{};
-    if(b.hide){
-        auto layout = makeLayout("    ...    ", f, maxText, width_, textHeight);
-        b.layouts.push_back(std::move(layout));
-    }else{
-        for(const auto &text: b.text.split('\n')){
-            auto layout = makeLayout(text, f, maxText, width_, textHeight);
-            b.layouts.push_back(std::move(layout));
-        }
-    }
+    // int textHeight{};
+    // int width_{};
+    makeDocument(b, f, maxText);
+    // if(b.hide){
+        // auto layout = makeLayout("    ...    ", f, maxText, width_, textHeight);
+        // b.layouts.push_back(std::move(layout));
+    // }else{
+        // b.doc = makeDocument(b.text, b, f, maxText, width_, textHeight);
+        // for(const auto &text: b.text.split('\n')){
+        //     auto layout = makeLayout(text, f, maxText, width_, textHeight);
+        //     b.layouts.push_back(std::move(layout));
+        // }
+    // }
 
-    b.width = width_;
-    b.height = textHeight + 2 * mPadding;
+    // b.width = width_;
+    // b.height = textHeight + 2 * mPadding;
 }
 
 std::unique_ptr<QTextLayout> ChatView::makeLayout(const QString& text, const QFont &f, int maxText, int &width_, int &textHeight)
@@ -349,6 +393,34 @@ std::unique_ptr<QTextLayout> ChatView::makeLayout(const QString& text, const QFo
         textHeight += layout->lineAt(i).height();
     }
     return std::move(layout);
+}
+
+void ChatView::makeDocument(Block &b, const QFont &f, int maxText)
+{
+    if(!b.doc)
+        b.doc = std::make_unique<QTextDocument>();
+    b.doc->clear();
+    b.doc->setDocumentMargin(0);
+    //}
+    if(b.hide)           b.doc->setPlainText("...");
+    else if(b.formatted) b.doc->setMarkdown(b.text);
+    else                 b.doc->setPlainText(b.text);
+    b.doc->setTextWidth(maxText);
+
+    QTextOption opt;
+    opt.setWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
+    b.doc->setDefaultTextOption(opt);
+    b.doc->setDefaultFont(f);
+
+    int natural = b.doc->idealWidth();
+    int width_ = maxText > 0? std::min(maxText, natural) : natural;
+    if(width_ < natural)
+        b.doc->setTextWidth(width_);
+
+    int textHeight = b.doc->size().height();
+
+    b.width = width_;
+    b.height = textHeight + 2 * mPadding;
 }
 
 void ChatView::layoutPart(QTextLayout &tl, const QString text, QFont font, int maxWidth, int &width_)
