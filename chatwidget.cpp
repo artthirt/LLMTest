@@ -18,7 +18,7 @@ ChatWidget::ChatWidget(QWidget *parent)
     tbt->setToolTip("Clear");
     tbt->setFixedSize(24, 24);
 
-    connect(tbt, &QToolButton::triggered, this, [this](QAction*){
+    connect(tbt, &QToolButton::clicked, this, [this](){
         mChatView.clearContent();
         mContent.json = {};
         mContent.context = {};
