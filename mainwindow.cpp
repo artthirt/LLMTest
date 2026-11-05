@@ -1,5 +1,6 @@
 #include "mainwindow.h"
 #include "./ui_mainwindow.h"
+#include "closebuttondelegate.h"
 
 #include <QDialog>
 #include <QFileDialog>
@@ -156,6 +157,11 @@ MainWindow::MainWindow(QWidget *parent)
     .arg(pal.color(QPalette::Midlight).name())
     .arg(pal.color(QPalette::HighlightedText).name());
 
+    auto *delegate = new CloseButtonDelegate(ui->lvTabs);
+    ui->lvTabs->setItemDelegate(delegate);
+
+    connect(delegate, &CloseButtonDelegate::closeRequested, this, &MainWindow::onCloseItemRequested);
+
     ui->gridLayout->addWidget(&mContextIndicator, 1, 1);
 
     ui->lvTabs->setStyleSheet(style);
@@ -289,10 +295,12 @@ void MainWindow::onAppendMessage(const QString &msg)
         onSendStatus("Message is empty", false);
         return;
     }
+    if(!mChatWidgets.count(mLastRow)) return;
+
     //auto res = "<span style='color:#aea;'><i>[User]> " + msg + "</i></span><br>";
     //mTextEdit->moveCursor(QTextCursor::End);
     //mTextEdit->insertHtml(res);
-    mChatWidgets[mLastRow]->addUser(msg);
+    mChatWidgets.at(mLastRow)->addUser(msg);
     //mCurrentContent[mSessionId].insertHtml(res);
 }
 
@@ -323,8 +331,10 @@ void MainWindow::saveSettings()
 {
     QList<QVariant> tabs;
     for(const auto &kv: mChatWidgets){
-        auto item = kv.second;
-        tabs.append(QVariant::fromValue<Content>(item->content()));
+        auto *item = kv.second;
+        if(item){
+            tabs.append(QVariant::fromValue<Content>(item->content()));
+        }
     }
     mDlgConfig.settings()->setValue("tabs_list_v", tabs);
 
@@ -348,13 +358,19 @@ void MainWindow::updateTabs()
 
 void MainWindow::loadItem(int row)
 {
-    Content &data = mChatWidgets[row]->content();
+    if(mChatWidgets.count(row) == 0){
+        return;
+    }
+    auto *item = mChatWidgets.at(row);
+    if(!item) return;
+
+    Content &data = item->content();
     if(mWorker && !data.empty()){
         mWorker->swapMessages(data.context);
         //mTextEdit->document()->setHtml(data.content);
         //mTextEdit->setHtml(data.toHtml());
-        mChatWidgets[row]->chat().setFromJson(data.json);
-        ui->swChats->setCurrentIndex(mChatWidgets[row]->indexW());
+        item->chat().setFromJson(data.json);
+        ui->swChats->setCurrentIndex(item->indexW());
     }
 }
 
@@ -435,20 +451,61 @@ void MainWindow::on_lvTabs_doubleClicked(const QModelIndex &index)
         if(dlg.exec()){
             auto name = dlg.sessionName();
             mTabModel.item(index.row())->setText(name);
-            mChatWidgets[index.row()]->content().caption = name;
+            auto *item = mChatWidgets.at(index.row());
+            if(item) item->content().caption = name;
         }
     }
+}
+
+void MainWindow::onCloseItemRequested(const QModelIndex &index)
+{
+    int row = index.row();
+    QTimer::singleShot(10, [this, row](){
+        auto wId = mTabModel.item(row)->data().toInt();
+        qDebug() << row << wId;
+        if(mChatWidgets.count(wId) > 0){
+            bool ishere = ui->lvTabs->currentIndex().row() == row;
+
+            if(mWorker->isGen()){
+                qDebug() << "Still working. wait...";
+                onSendStatus("Still working. wait...", false);
+                return;
+            }
+
+            if(ishere && mTabModel.rowCount() > 1){
+                int newrow = row;
+                if(row + 1 < mTabModel.rowCount()){
+                    newrow = row + 1;
+                }else{
+                    newrow = row - 1;
+                }
+                ui->lvTabs->setCurrentIndex(mTabModel.index(row - 1, 0));
+                loadItem(newrow);
+            }
+            ui->lvTabs->setCurrentIndex(mTabModel.index(row - 1, 0));
+            {
+                auto item = mChatWidgets.at(wId);
+                if(item){
+                    mChatWidgets.erase(wId);
+                    ui->swChats->removeWidget(item);
+                    delete item;
+                }
+            }
+            mTabModel.removeRow(row);
+        }
+    });
 }
 
 void MainWindow::addNewSession(int sessId, Content &&c)
 {
     mChatWidgets[sessId] = new ChatWidget();
     mChatWidgets[sessId]->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-    auto *w = mChatWidgets[sessId];
+    auto *w = mChatWidgets.at(sessId);
     w->content() = std::move(c);
     auto id = ui->swChats->addWidget(w);
     w->setIndexW(id);
     ui->swChats->setCurrentIndex(id);
+    mTabModel.item(sessId)->setData(sessId);
 }
 
 void MainWindow::on_lvTabs_clicked(const QModelIndex &index)
@@ -462,18 +519,26 @@ void MainWindow::on_lvTabs_clicked(const QModelIndex &index)
 
 void MainWindow::onSendReasoning(QString text)
 {
-    mChatWidgets[mSessionId]->onSendReasoning(text);
+    if(!mChatWidgets.count(mSessionId)) return;
+    auto *item = mChatWidgets.at(mSessionId);
+    if(item) item->onSendReasoning(text);
 }
 
 void MainWindow::onSendContent(QString text)
 {
-    mChatWidgets[mSessionId]->onSendContent(text);
+    if(!mChatWidgets.count(mSessionId)) return;
+    auto *item = mChatWidgets.at(mSessionId);
+    if(item) item->onSendContent(text);
 }
 
 void MainWindow::onGenerationFinished()
 {
-    mChatWidgets[mSessionId]->content().context = mWorker->messages();
-    mChatWidgets[mSessionId]->generationFinished();
+    if(!mChatWidgets.count(mSessionId)) return;
+    auto *item = mChatWidgets.at(mSessionId);
+    if(item){
+        item->content().context = mWorker->messages();
+        item->generationFinished();
+    }
 }
 
 void MainWindow::on_pbClearAll_clicked()

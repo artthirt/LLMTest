@@ -57,6 +57,8 @@ private slots:
 
     void on_lvTabs_doubleClicked(const QModelIndex &index);
 
+    void onCloseItemRequested(const QModelIndex &index);
+
 protected:
     bool eventFilter(QObject *watched, QEvent *event) override;
 

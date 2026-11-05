@@ -22,6 +22,8 @@ set(PROJECT_SOURCES
     dialogconfig.h dialogconfig.cpp dialogconfig.ui
     circularprogress.h circularprogress.cpp
     chatview.h chatview.cpp
+    chatwidget.h chatwidget.cpp chatwidget.ui
+    closebuttondelegate.h closebuttondelegate.cpp
 )
 
 set(GGML_NATIVE ON CACHE BOOL "" FORCE)
@@ -51,7 +53,6 @@ add_subdirectory(llama)
 
 add_executable(LLMTest
     ${PROJECT_SOURCES}
-    chatwidget.h chatwidget.cpp chatwidget.ui
 )
 
 target_link_libraries(LLMTest PRIVATE
