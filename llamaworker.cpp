@@ -99,6 +99,10 @@ void LlamaWorker::loadModel(const QString &gguf, const Params &params)
 
     mUseThinking = params.enable_thinking;
 
+    qDebug() << "main_gpu:" << params.main_gpu;
+    qDebug() << "type_k:  " << params.type_k;
+    qDebug() << "type_v:  " << params.type_v;
+
     llama_model_params mp = llama_model_default_params();
     mp.n_gpu_layers = params.gpu_layers;
     mp.main_gpu = params.main_gpu;

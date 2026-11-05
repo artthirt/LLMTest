@@ -93,6 +93,14 @@ inline QDataStream& operator>>(QDataStream& in, Content& c)
 
 Q_DECLARE_METATYPE(Content)
 
+const QMap<QString, ggml_type> KVCacheType = {
+    {"fp16", ggml_type::GGML_TYPE_F16},
+    {"q8_0", ggml_type::GGML_TYPE_Q8_0},
+    {"q6_k", ggml_type::GGML_TYPE_Q6_K},
+    {"q5_k", ggml_type::GGML_TYPE_Q5_K},
+    {"q4_k", ggml_type::GGML_TYPE_Q4_K},
+};
+
 class LlamaWorker: public QThread
 {
     Q_OBJECT

@@ -32,6 +32,10 @@ DialogConfig::DialogConfig(QWidget *parent)
 {
     ui->setupUi(this);
 
+    auto keys = KVCacheType.keys();
+    ui->cbKVKey->addItems(keys);
+    ui->cbKVValue->addItems(keys);
+
     ui->tvDevices->setModel(&mDevsModel);
     ui->tvDevices->horizontalHeader()->setStretchLastSection(true);
     mDevsModel.setColumnCount(2);
@@ -117,6 +121,8 @@ void DialogConfig::loadSettings()
     ui->pteSystemPrompt->setPlainText(mSetts.value("system_prompt").toString());
     ui->chbThinking->setChecked(mSetts.value("thinking").toBool());
     ui->sbMainGPU->setValue(mSetts.value("main_gpu", 0).toInt());
+    ui->cbKVKey->setCurrentIndex(mSetts.value("kvkey", 0).toInt());
+    ui->cbKVValue->setCurrentIndex(mSetts.value("kvval", 0).toInt());
 
     auto weights = mSetts.value("weights").toStringList();
     ui->cbWeights->addItems(weights);
@@ -136,6 +142,8 @@ void DialogConfig::saveSettings()
     mSetts.setValue("system_prompt", ui->pteSystemPrompt->toPlainText());
     mSetts.setValue("thinking", ui->chbThinking->isChecked());
     mSetts.setValue("main_gpu", ui->sbMainGPU->value());
+    mSetts.setValue("kvkey", ui->cbKVKey->currentIndex());
+    mSetts.setValue("kvval", ui->cbKVValue->currentIndex());
 
     QStringList items;
     for(int i = 0; i < ui->cbWeights->count(); ++i){
@@ -152,16 +160,13 @@ void DialogConfig::updateParams()
     mParams.system_prompt = ui->pteSystemPrompt->toPlainText();
     mParams.enable_thinking = ui->chbThinking->isChecked();
     mParams.main_gpu = ui->sbMainGPU->value();
+    mParams.type_k = KVCacheType.value(ui->cbKVKey->currentText());
+    mParams.type_v = KVCacheType.value(ui->cbKVValue->currentText());
 }
 
 void DialogConfig::on_buttonBox_accepted()
 {
-    mParams.context = ui->sbMaxContext->value();
-    mParams.gpu_layers = ui->sbGpuLayers->value();
-    mParams.temp = ui->dsbTemp->value();
-    mParams.system_prompt = ui->pteSystemPrompt->toPlainText();
-    mParams.enable_thinking = ui->chbThinking->isChecked();
-    mParams.main_gpu = ui->sbMainGPU->value();
+    updateParams();
 
     auto spl = ui->leSplitted->text().split(",");
     QVector<float> vspl;
