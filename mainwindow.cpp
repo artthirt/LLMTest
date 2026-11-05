@@ -55,6 +55,12 @@ MainWindow::MainWindow(QWidget *parent)
 
     ui->mainSplitter->setSizes({700, 100});
 
+    connect(&mDlgConfig, &DialogConfig::sendWeights, this, [this](QString w, QStringList ws){
+        ui->cbWeights->clear();
+        ui->cbWeights->setCurrentText(w);
+        ui->cbWeights->addItems(ws);
+    });
+
     mWorker.reset(new LlamaWorker);
 
     connect(mWorker.get(), &LlamaWorker::sendMessage, this, [this](QString msg){

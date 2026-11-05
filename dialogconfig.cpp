@@ -100,7 +100,7 @@ QString DialogConfig::systemPrompt() const
 
 QString DialogConfig::modelPath() const
 {
-    return ui->lePath->text();
+    return ui->cbWeights->currentText();
 }
 
 QSettings *DialogConfig::settings()
@@ -110,7 +110,7 @@ QSettings *DialogConfig::settings()
 
 void DialogConfig::loadSettings()
 {
-    ui->lePath->setText(mSetts.value("path").toString());
+    ui->cbWeights->setCurrentText(mSetts.value("path").toString());
     ui->sbGpuLayers->setValue(mSetts.value("gpu_layers", -1).toInt());
     ui->sbMaxContext->setValue(mSetts.value("max_context", 8192).toInt());
     ui->dsbTemp->setValue(mSetts.value("temp", 0.8).toDouble());
@@ -118,18 +118,30 @@ void DialogConfig::loadSettings()
     ui->chbThinking->setChecked(mSetts.value("thinking").toBool());
     ui->sbMainGPU->setValue(mSetts.value("main_gpu", 0).toInt());
 
+    auto weights = mSetts.value("weights").toStringList();
+    ui->cbWeights->addItems(weights);
+    QTimer::singleShot(0, [this, weights](){
+        emit sendWeights(ui->cbWeights->currentText(), weights);
+    });
+
     updateParams();
 }
 
 void DialogConfig::saveSettings()
 {
-    mSetts.setValue("path", ui->lePath->text());
+    mSetts.setValue("path", ui->cbWeights->currentText());
     mSetts.setValue("gpu_layers", ui->sbGpuLayers->value());
     mSetts.setValue("max_context", ui->sbMaxContext->value());
     mSetts.setValue("temp", ui->dsbTemp->value());
     mSetts.setValue("system_prompt", ui->pteSystemPrompt->toPlainText());
     mSetts.setValue("thinking", ui->chbThinking->isChecked());
     mSetts.setValue("main_gpu", ui->sbMainGPU->value());
+
+    QStringList items;
+    for(int i = 0; i < ui->cbWeights->count(); ++i){
+        items << ui->cbWeights->itemText(i);
+    }
+    mSetts.setValue("weights", items);
 }
 
 void DialogConfig::updateParams()
@@ -233,7 +245,15 @@ void DialogConfig::on_tbtSelect_clicked()
     QString sdir = QFileInfo(path).absolutePath();
     path = QFileDialog::getOpenFileName(nullptr, "GGUF model", sdir, "*.gguf");
     if(!path.isEmpty()){
-        ui->lePath->setText(path);
+        ui->cbWeights->setCurrentText(path);
+        if(ui->cbWeights->findText(path) < 0)
+            ui->cbWeights->addItem(path);
+        QStringList items;
+        for(int i = 0; i < ui->cbWeights->count(); ++i){
+            items << ui->cbWeights->itemText(i);
+        }
+        emit sendWeights(ui->cbWeights->currentText(), items);
+
     }
     saveSettings();
 }

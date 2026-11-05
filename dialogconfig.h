@@ -49,6 +49,9 @@ public:
 
     void updateParams();
 
+signals:
+    void sendWeights(QString, QStringList);
+
 private slots:
     void on_buttonBox_accepted();
 
