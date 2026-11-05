@@ -41,6 +41,11 @@ private:
     int mChatReasoningId{-1};
     int mChatContentId{-1};
 
+    void makeToolButton(QWidget *widget,
+                        const QString &text,
+                        std::function<void()> fun,
+                        const QString &tooltip,
+                        int X);
 };
 
 #endif // CHATWIDGET_H

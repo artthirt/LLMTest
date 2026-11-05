@@ -1,5 +1,7 @@
 #include "chatwidget.h"
+#include "dialogconfig.h"
 #include "ui_chatwidget.h"
+#include <qtoolbutton.h>
 
 ChatWidget::ChatWidget(QWidget *parent)
     : QWidget(parent)
@@ -12,6 +14,12 @@ ChatWidget::ChatWidget(QWidget *parent)
     auto *v = layout(); //new QVBoxLayout;
     //setLayout(v);
     v->addWidget(&mChatView);
+
+    makeToolButton(this, "🧹", [this](){
+        mChatView.clearContent();
+        mContent.json = {};
+        mContent.context = {};
+    }, "Clear", 0);
 }
 
 ChatWidget::~ChatWidget()
@@ -51,4 +59,56 @@ void ChatWidget::onSendContent(QString text)
     }else{
         mChatView.setContent(mChatContentId, text);
     }
+}
+
+void ChatWidget::makeToolButton(QWidget *widget, const QString &text, std::function<void ()> fun, const QString &tooltip, int X)
+{
+    auto *button = new QToolButton(widget);
+    button->setText(text);
+    // button->setIcon(style()->standardIcon(
+    //     QStyle::SP_MessageBoxInformation));
+    button->setToolTip(tooltip);
+    button->setAutoRaise(true);
+    button->setFixedSize(24, 24);
+
+    auto p = qApp->palette();
+
+    button->setStyleSheet(QString(R"(
+    QToolButton {
+        background-color: %1;
+        border: none;
+    }
+    QToolButton:hover {
+        background-color: %2;
+        border-radius: 4px;
+    }
+    QToolButton:pressed {
+        background-color: %3;
+    }
+    )")
+        .arg(p.color(QPalette::Button).name())
+        .arg(p.color(QPalette::Midlight).name())
+        .arg(p.color(QPalette::Mid).name()));
+
+    QObject::connect(button, &QToolButton::clicked, this, [this, fun]() {
+        // Your action here
+        if(fun){
+            fun();
+        }
+    });
+
+    auto updatePosition = [widget, button, X]() {
+        button->move(widget->width() - button->width() - 8 - X, 4);
+        button->raise();
+    };
+
+    // QObject::connect(plainTextEdit, &QTextEdit::textChanged,
+    //                  this, updatePosition); // Optional; not needed for resizing.
+
+    auto *filter = new ResizeEventFilter(
+        widget, updatePosition);
+
+    widget->installEventFilter(filter);
+
+    updatePosition();
 }

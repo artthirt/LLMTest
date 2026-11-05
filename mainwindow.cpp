@@ -168,7 +168,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     connect(delegate, &CloseButtonDelegate::closeRequested, this, &MainWindow::onCloseItemRequested);
 
-    ui->gridLayout->addWidget(&mContextIndicator, 1, 1);
+    ui->gridLayout->addWidget(&mContextIndicator, 1, 2);
 
     ui->lvTabs->setStyleSheet(style);
 
@@ -380,11 +380,11 @@ void MainWindow::loadItem(int row)
     }
 }
 
-void MainWindow::makeToolButton(QTextEdit *plainTextEdit,
+void MainWindow::makeToolButton(QWidget *widget,
                                 const QString &text, std::function<void ()> fun,
                                 const QString &tooltip, int X)
 {
-    auto *button = new QToolButton(plainTextEdit);
+    auto *button = new QToolButton(widget);
     button->setText(text);
     // button->setIcon(style()->standardIcon(
     //     QStyle::SP_MessageBoxInformation));
@@ -413,18 +413,18 @@ void MainWindow::makeToolButton(QTextEdit *plainTextEdit,
         }
     });
 
-    auto updatePosition = [plainTextEdit, button, X]() {
-        button->move(plainTextEdit->width() - button->width() - 8 - X, 4);
+    auto updatePosition = [widget, button, X]() {
+        button->move(widget->width() - button->width() - 8 - X, 4);
         button->raise();
     };
 
-    QObject::connect(plainTextEdit, &QTextEdit::textChanged,
-                     this, updatePosition); // Optional; not needed for resizing.
+    // QObject::connect(plainTextEdit, &QTextEdit::textChanged,
+    //                  this, updatePosition); // Optional; not needed for resizing.
 
     auto *filter = new ResizeEventFilter(
-        plainTextEdit, updatePosition);
+        widget, updatePosition);
 
-    plainTextEdit->installEventFilter(filter);
+    widget->installEventFilter(filter);
 
     updatePosition();
 }

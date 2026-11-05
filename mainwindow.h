@@ -90,7 +90,7 @@ private:
     void loadItem(int row);
     void addNewSession(int sessId, Content &&c);
 
-    void makeToolButton(QTextEdit *plainTextEdit,
+    void makeToolButton(QWidget *widget,
                         const QString &text,
                         std::function<void()> fun,
                         const QString &tooltip,
