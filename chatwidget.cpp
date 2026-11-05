@@ -13,13 +13,25 @@ ChatWidget::ChatWidget(QWidget *parent)
 
     auto *v = layout(); //new QVBoxLayout;
     //setLayout(v);
-    v->addWidget(&mChatView);
+    auto tbt = new QToolButton();
+    tbt->setText("🧹");
+    tbt->setToolTip("Clear");
+    tbt->setFixedSize(24, 24);
 
-    makeToolButton(this, "🧹", [this](){
+    connect(tbt, &QToolButton::triggered, this, [this](QAction*){
         mChatView.clearContent();
         mContent.json = {};
         mContent.context = {};
-    }, "Clear", 0);
+    });
+
+    v->addWidget(tbt);
+    v->addWidget(&mChatView);
+
+    // makeToolButton(this, "🧹", [this](){
+    //     mChatView.clearContent();
+    //     mContent.json = {};
+    //     mContent.context = {};
+    // }, "Clear", 0);
 }
 
 ChatWidget::~ChatWidget()
@@ -73,22 +85,29 @@ void ChatWidget::makeToolButton(QWidget *widget, const QString &text, std::funct
 
     auto p = qApp->palette();
 
+    auto trn = [](QColor c, int a){
+        return QString("rgba(%1, %2, %3, %4)")
+            .arg(c.red()).arg(c.green()).arg(c.blue()).arg(a);
+    };
+
     button->setStyleSheet(QString(R"(
     QToolButton {
         background-color: %1;
-        border: none;
+        border: 1px solid %2;
+        border-radius: 3px;
     }
     QToolButton:hover {
-        background-color: %2;
+        background-color: %3;
         border-radius: 4px;
     }
     QToolButton:pressed {
-        background-color: %3;
+        background-color: %4;
     }
     )")
-        .arg(p.color(QPalette::Button).name())
-        .arg(p.color(QPalette::Midlight).name())
-        .arg(p.color(QPalette::Mid).name()));
+        .arg(trn(p.color(QPalette::Button), 200))
+        .arg(trn(p.color(QPalette::Dark), 200))
+        .arg(trn(p.color(QPalette::Midlight), 200))
+        .arg(trn(p.color(QPalette::Mid), 200)));
 
     QObject::connect(button, &QToolButton::clicked, this, [this, fun]() {
         // Your action here

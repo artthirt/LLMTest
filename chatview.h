@@ -54,7 +54,7 @@ public:
     void clearContent();
     void setContent(ID id, const QString& text);
     void relayout();
-    void finalize(ID id);
+    void finalize(ID id, bool markdown = true);
 
     bool leapToBottom() const {return mLeapToBottom; }
     void setLeapToBottom(bool v);

@@ -369,6 +369,9 @@ void MainWindow::loadItem(int row)
     }
     auto *item = mChatWidgets.at(row);
     if(!item) return;
+    int id = ui->swChats->indexOf(item);
+    if(id < 0) return;
+    ui->swChats->setCurrentIndex(id);
 
     Content &data = item->content();
     if(mWorker && !data.empty()){
@@ -376,7 +379,6 @@ void MainWindow::loadItem(int row)
         //mTextEdit->document()->setHtml(data.content);
         //mTextEdit->setHtml(data.toHtml());
         item->chat().setFromJson(data.json);
-        ui->swChats->setCurrentIndex(item->indexW());
     }
 }
 

@@ -69,11 +69,11 @@ void ChatView::setContent(ID id, const QString &text)
     }
 }
 
-void ChatView::finalize(ID id)
+void ChatView::finalize(ID id, bool markdown)
 {
     if(id >= 0 && id < mBlocks.size()){
         qDebug() << "finalize" << id;
-        mBlocks[id].formatted = true;
+        mBlocks[id].formatted = markdown;
         relayout();
     }
 }
@@ -163,6 +163,9 @@ bool ChatView::viewportEvent(QEvent *event)
             });
             menu.addAction(tr("To markdown"), this, [this, index] {
                 finalize(index);
+            });
+            menu.addAction(tr("To plain text"), this, [this, index] {
+                finalize(index, false);
             });
             menu.exec(ce->globalPos());
         }else{
