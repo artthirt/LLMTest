@@ -57,8 +57,8 @@ MainWindow::MainWindow(QWidget *parent)
 
     connect(&mDlgConfig, &DialogConfig::sendWeights, this, [this](QString w, QStringList ws){
         ui->cbWeights->clear();
-        ui->cbWeights->setCurrentText(w);
         ui->cbWeights->addItems(ws);
+        ui->cbWeights->setCurrentText(w);
     });
 
     mWorker.reset(new LlamaWorker);
