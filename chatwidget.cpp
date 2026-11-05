@@ -98,7 +98,7 @@ void ChatWidget::makeToolButton(QWidget *widget, const QString &text, std::funct
     });
 
     auto updatePosition = [widget, button, X]() {
-        button->move(widget->width() - button->width() - 8 - X, 4);
+        button->move(14 + X, 14);
         button->raise();
     };
 
