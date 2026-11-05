@@ -239,7 +239,7 @@ void MainWindow::on_pbLoad_clicked()
 
     LlamaWorker::Params params = mDlgConfig.params();
 
-    QString modelpath = mDlgConfig.modelPath();
+    QString modelpath = ui->cbWeights->currentText();
 
     onSendStatus("Model loading...", true);
     mIsLoading = true;
