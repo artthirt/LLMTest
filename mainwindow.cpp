@@ -128,7 +128,8 @@ MainWindow::MainWindow(QWidget *parent)
         background-color: %1;
         color: %2;
         border: 1px solid transparent;
-        padding: 6px 10px;
+        border-radius: 5px;
+        padding: 0px 10px;
     }
 
     QListView::item:hover {
@@ -152,7 +153,7 @@ MainWindow::MainWindow(QWidget *parent)
     .arg(pal.color(QPalette::Text).name())
     .arg(pal.color(QPalette::Mid).name())
     .arg(pal.color(QPalette::AlternateBase).name())
-    .arg(pal.color(QPalette::Highlight).name())
+    .arg(pal.color(QPalette::Midlight).name())
     .arg(pal.color(QPalette::HighlightedText).name());
 
     ui->gridLayout->addWidget(&mContextIndicator, 1, 1);
