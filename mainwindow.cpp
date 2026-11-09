@@ -373,13 +373,13 @@ void MainWindow::loadItem(int row)
     if(id < 0) return;
     ui->swChats->setCurrentIndex(id);
 
-    Content &data = item->content();
-    if(mWorker && !data.empty()){
-        mWorker->swapMessages(data.context);
-        //mTextEdit->document()->setHtml(data.content);
-        //mTextEdit->setHtml(data.toHtml());
-        item->chat().setFromJson(data.json);
-    }
+    // Content &data = item->content();
+    // if(mWorker && !data.empty()){
+    //     mWorker->swapMessages(data.context);
+    //     //mTextEdit->document()->setHtml(data.content);
+    //     //mTextEdit->setHtml(data.toHtml());
+    //     item->chat().setFromJson(data.json);
+    // }
 }
 
 void MainWindow::makeToolButton(QWidget *widget,
