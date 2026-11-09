@@ -141,6 +141,7 @@ public:
     float contextProgress() const;
 
     QStringList getDevices() const;
+    std::map<QString, ggml_backend_dev_t> getDevicesIdByName() const;
 
     void swapMessages(std::vector<common_chat_msg> &messages);
     std::vector<common_chat_msg> messages() const { return mMessages; }

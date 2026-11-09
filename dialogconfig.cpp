@@ -77,7 +77,7 @@ void DialogConfig::setDevices(const QStringList &devices)
     for(int i = 0; i < mDevices.size(); i += 2){
         QStandardItem *col1 = new QStandardItem("");
         col1->setCheckable(true);
-        col1->setCheckState(Qt::CheckState::Unchecked);
+        col1->setCheckState(mSelectedDevices.contains(mDevices[i])? Qt::Checked : Qt::Unchecked);
         QStandardItem *col2 = new QStandardItem(mDevices[i + 1]);
         col2->setData(mDevices[i]);
         mDevsModel.appendRow({col1, col2});
@@ -123,6 +123,9 @@ void DialogConfig::loadSettings()
     ui->sbMainGPU->setValue(mSetts.value("main_gpu", 0).toInt());
     ui->cbKVKey->setCurrentIndex(mSetts.value("kvkey", 0).toInt());
     ui->cbKVValue->setCurrentIndex(mSetts.value("kvval", 0).toInt());
+    ui->leSplitted->setText(mSetts.value("splitting").toString());
+
+    mSelectedDevices = mSetts.value("selected_devices").toStringList();
 
     auto weights = mSetts.value("weights").toStringList();
     ui->cbWeights->addItems(weights);
@@ -144,6 +147,10 @@ void DialogConfig::saveSettings()
     mSetts.setValue("main_gpu", ui->sbMainGPU->value());
     mSetts.setValue("kvkey", ui->cbKVKey->currentIndex());
     mSetts.setValue("kvval", ui->cbKVValue->currentIndex());
+    mSetts.setValue("splitting", ui->leSplitted->text());
+
+    mSelectedDevices = selectedDevices();
+    mSetts.setValue("selected_devices", mSelectedDevices);
 
     QStringList items;
     for(int i = 0; i < ui->cbWeights->count(); ++i){

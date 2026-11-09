@@ -83,6 +83,19 @@ QStringList LlamaWorker::getDevices() const
     return ret;
 }
 
+std::map<QString, ggml_backend_dev_t> LlamaWorker::getDevicesIdByName() const
+{
+    std::map<QString, ggml_backend_dev_t> ret;
+
+    for(int i = 0; i < ggml_backend_dev_count(); ++i){
+        auto dev = ggml_backend_dev_get(i);
+        auto cname = ggml_backend_dev_name(dev);
+        auto cdesc = ggml_backend_dev_description(dev);
+        ret[QString::fromUtf8(cdesc)] = dev;
+    }
+    return ret;
+}
+
 void LlamaWorker::swapMessages(std::vector<common_chat_msg> &messages)
 {
     std::swap(mMessages, messages);
@@ -115,6 +128,27 @@ void LlamaWorker::loadModel(const QString &gguf, const Params &params)
         return true;
     };
 
+
+    mp.split_mode = params.split_mode;
+    std::vector<float> ts(llama_max_devices(), 0);
+    if(!params.splitBetweenDevices.empty()){
+        std::copy(params.splitBetweenDevices.begin(), params.splitBetweenDevices.end(), ts.begin());
+        mp.tensor_split = ts.data();
+    }
+    std::vector<ggml_backend_dev_t> devices;
+    if(!params.selectedDevices.empty()){
+        auto map = getDevicesIdByName();
+        for(const auto &qstr: params.selectedDevices){
+            if(map.count(qstr) > 0){
+                devices.push_back(map.at(qstr));
+            }
+        }
+        if(!devices.empty()){
+            devices.push_back(0);
+            mp.devices = devices.data();
+        }
+    }
+
     mModel = llama_model_load_from_file(gguf.toLocal8Bit().data(), mp);
     if(!mModel){
         mIsError = true;
@@ -126,7 +160,7 @@ void LlamaWorker::loadModel(const QString &gguf, const Params &params)
 
     llama_context_params ctx_params = llama_context_default_params();
     ctx_params.n_ctx = params.context;
-    ctx_params.n_batch = 512;
+    ctx_params.n_batch = params.n_batch;
     ctx_params.n_ubatch = 512;
     ctx_params.flash_attn_type = params.use_flashatt? LLAMA_FLASH_ATTN_TYPE_ENABLED : LLAMA_FLASH_ATTN_TYPE_DISABLED;
     ctx_params.type_k = params.type_k;

@@ -63,6 +63,7 @@ private:
     LlamaWorker::Params mParams;
     QStringList mDevices;
     QSettings mSetts;
+    QStringList mSelectedDevices;
 
     void makeToolButton(QPlainTextEdit* plainTextEdit,
                         const QString &text,
