@@ -112,6 +112,7 @@ public:
         int gpu_layers{-1};
         int n_batch{2048};
         int main_gpu{0};
+        int n_threads{2};
 
         bool enable_thinking{false};
 
@@ -128,6 +129,10 @@ public:
         QVector<float> splitBetweenDevices;
 
         QString system_prompt;
+
+        Params(){
+            n_threads = std::max<int>(1, std::thread::hardware_concurrency() / 2);
+        }
     };
 
     LlamaWorker();

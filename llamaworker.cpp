@@ -165,6 +165,7 @@ void LlamaWorker::loadModel(const QString &gguf, const Params &params)
     ctx_params.flash_attn_type = params.use_flashatt? LLAMA_FLASH_ATTN_TYPE_ENABLED : LLAMA_FLASH_ATTN_TYPE_DISABLED;
     ctx_params.type_k = params.type_k;
     ctx_params.type_v = params.type_v;
+    ctx_params.n_threads = params.n_threads;
 
     mCtx = llama_init_from_model(mModel, ctx_params);
     if(!mCtx){
