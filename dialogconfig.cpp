@@ -126,6 +126,16 @@ void DialogConfig::loadSettings()
     ui->leSplitted->setText(mSetts.value("splitting").toString());
 
     mSelectedDevices = mSetts.value("selected_devices").toStringList();
+    mSystemPromptPresets = mSetts.value("system_prompt_presets").toMap();
+    if(!mSystemPromptPresets.empty()){
+        for(auto key: mSystemPromptPresets.keys()){
+            auto lst = mSystemPromptPresets[key].toList();
+            if(lst.size() >= 2){
+                ui->cbPreset->addItem(lst[0].toString(), key);
+            }
+        }
+        on_cbPreset_currentIndexChanged(0);
+    }
 
     auto weights = mSetts.value("weights").toStringList();
     ui->cbWeights->addItems(weights);
@@ -151,6 +161,10 @@ void DialogConfig::saveSettings()
 
     mSelectedDevices = selectedDevices();
     mSetts.setValue("selected_devices", mSelectedDevices);
+
+    mSetts.setValue("system_prompt_presets", mSystemPromptPresets);
+
+    mSetts.setValue("presets", mSystemPromptPresets);
 
     QStringList items;
     for(int i = 0; i < ui->cbWeights->count(); ++i){
@@ -269,3 +283,48 @@ void DialogConfig::on_tbtSelect_clicked()
     }
     saveSettings();
 }
+
+void DialogConfig::on_cbPreset_currentIndexChanged(int index)
+{
+    auto key = ui->cbPreset->itemData(index).toString();
+    if(mSystemPromptPresets.contains(key)){
+        auto lst = mSystemPromptPresets[key].toList();
+        if(lst.size() >= 2){
+            ui->cbPreset->setCurrentText(lst[0].toString());
+            ui->pteSystemPrompt->setPlainText(lst[1].toString());
+        }
+    }
+}
+
+void DialogConfig::on_pbSavePreset_clicked()
+{
+    auto sptext = ui->pteSystemPrompt->toPlainText();
+    auto spcapt = ui->cbPreset->currentText();
+    if(spcapt.isEmpty()){
+        return;
+    }
+    int row = time(nullptr) + rand();
+    auto srow = QString::number(row);
+    ui->cbPreset->addItem(spcapt, srow);
+    QVariantList sl;
+    sl << spcapt << sptext;
+    mSystemPromptPresets[srow] = sl;
+}
+
+void DialogConfig::on_tbRemovePreset_clicked()
+{
+    auto srow = ui->cbPreset->currentData().toString();
+    if(mSystemPromptPresets.contains(srow)){
+        auto id = ui->cbPreset->findData(srow);
+        if(id >= 0){
+            mSystemPromptPresets.remove(srow);
+            ui->cbPreset->removeItem(id);
+
+        }
+    }else{
+        ui->cbPreset->removeItem(ui->cbPreset->currentIndex());
+
+    }
+    on_cbPreset_currentIndexChanged(0);
+}
+

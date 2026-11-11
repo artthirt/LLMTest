@@ -57,6 +57,12 @@ private slots:
 
     void on_tbtSelect_clicked();
 
+    void on_cbPreset_currentIndexChanged(int index);
+
+    void on_pbSavePreset_clicked();
+
+    void on_tbRemovePreset_clicked();
+
 private:
     Ui::DialogConfig *ui;
     QStandardItemModel mDevsModel;
@@ -64,6 +70,7 @@ private:
     QStringList mDevices;
     QSettings mSetts;
     QStringList mSelectedDevices;
+    QVariantMap mSystemPromptPresets;
 
     void makeToolButton(QPlainTextEdit* plainTextEdit,
                         const QString &text,
