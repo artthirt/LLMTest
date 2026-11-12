@@ -43,7 +43,7 @@ void CloseButtonDelegate::paint(QPainter *painter, const QStyleOptionViewItem &o
     painter->drawRoundedRect(buttonRect, 4, 4);
 
     painter->setPen(Qt::white);
-    painter->drawText(buttonRect, Qt::AlignCenter, "❌");
+    painter->drawText(buttonRect, Qt::AlignCenter, "✕");
 
     painter->restore();
 }
