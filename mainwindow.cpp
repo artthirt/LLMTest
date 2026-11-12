@@ -172,6 +172,8 @@ MainWindow::MainWindow(QWidget *parent)
 
     ui->lvTabs->setStyleSheet(style);
 
+    ui->swChats->setStyleSheet("background: transparent; border-radius: 5px;");
+
     // makeToolButton(mTextEdit, "❌", [this](){
     //     if(mWorker){
     //         mWorker->clearMessage();
@@ -509,7 +511,7 @@ void MainWindow::addNewSession(int sessId, Content &&c)
     mChatWidgets[sessId] = new ChatWidget();
     mChatWidgets[sessId]->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     auto *w = mChatWidgets.at(sessId);
-    w->content() = std::move(c);
+    w->addContent(std::move(c));
     auto id = ui->swChats->addWidget(w);
     w->setIndexW(id);
     ui->swChats->setCurrentIndex(id);

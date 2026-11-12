@@ -39,6 +39,15 @@ ChatWidget::~ChatWidget()
     delete ui;
 }
 
+void ChatWidget::addContent(Content &&c)
+{
+    mContent = std::move(c);
+    qDebug() << mContent.json;
+    if(!mContent.empty()){
+        mChatView.setFromJson(mContent.json);
+    }
+}
+
 void ChatWidget::addUser(const QString &msg)
 {
     mChatView.addUser(msg);

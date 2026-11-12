@@ -21,6 +21,8 @@ public:
     ChatView& chat()   { return mChatView; }
     Content& content() { return mContent; }
 
+    void addContent(Content&& c);
+
     void addUser(const QString &msg);
 
     void setIndexW(int v) { mIndexW = v; }

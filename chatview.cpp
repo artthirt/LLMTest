@@ -27,6 +27,7 @@ ChatView::ChatView(QWidget *parent): QAbstractScrollArea(parent)
         mContentStyle.italic = false;
         mContentStyle.background = QColor(Qt::gray).lighter(40);
     }
+
     auto *v = verticalScrollBar();
     v->setSingleStep(10);
 }
