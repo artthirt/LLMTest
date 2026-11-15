@@ -32,7 +32,6 @@ public:
     explicit DialogConfig(QWidget *parent = nullptr);
     ~DialogConfig();
 
-    void setParams(const LlamaWorker::Params &params);
     LlamaWorker::Params params() const;
 
     void setDevices(const QStringList &devices);
@@ -47,7 +46,7 @@ public:
 
     QSettings* settings();
 
-    void updateParams();
+    LlamaWorker::Params updateParams() const;
 
 signals:
     void sendWeights(QString, QStringList);
@@ -66,7 +65,7 @@ private slots:
 private:
     Ui::DialogConfig *ui;
     QStandardItemModel mDevsModel;
-    LlamaWorker::Params mParams;
+    //LlamaWorker::Params mParams;
     QStringList mDevices;
     QSettings mSetts;
     QStringList mSelectedDevices;

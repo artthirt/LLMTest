@@ -55,19 +55,10 @@ DialogConfig::~DialogConfig()
     delete ui;
 }
 
-void DialogConfig::setParams(const LlamaWorker::Params &params)
-{
-    mParams = params;
-
-    ui->dsbTemp->setValue(mParams.temp);
-    ui->sbGpuLayers->setValue(mParams.gpu_layers);
-    ui->sbMaxContext ->setValue(mParams.context);
-    ui->pteSystemPrompt->setPlainText(mParams.system_prompt);
-}
-
 LlamaWorker::Params DialogConfig::params() const
 {
-    return mParams;
+    auto params = updateParams();
+    return params;
 }
 
 void DialogConfig::setDevices(const QStringList &devices)
@@ -128,7 +119,7 @@ void DialogConfig::loadSettings()
     mSelectedDevices = mSetts.value("selected_devices").toStringList();
     mSystemPromptPresets = mSetts.value("system_prompt_presets").toMap();
     if(!mSystemPromptPresets.empty()){
-        for(auto key: mSystemPromptPresets.keys()){
+        for(const auto &key: mSystemPromptPresets.keys()){
             auto lst = mSystemPromptPresets[key].toList();
             if(lst.size() >= 2){
                 ui->cbPreset->addItem(lst[0].toString(), key);
@@ -138,9 +129,10 @@ void DialogConfig::loadSettings()
     }
 
     auto weights = mSetts.value("weights").toStringList();
+    auto weights_id = mSetts.value("weights_id").toInt();
     ui->cbWeights->addItems(weights);
-    QTimer::singleShot(0, [this, weights](){
-        emit sendWeights(ui->cbWeights->currentText(), weights);
+    QTimer::singleShot(0, [this, weights, weights_id](){
+        emit sendWeights(ui->cbWeights->itemText(weights_id), weights);
     });
 
     updateParams();
@@ -171,27 +163,23 @@ void DialogConfig::saveSettings()
         items << ui->cbWeights->itemText(i);
     }
     mSetts.setValue("weights", items);
+    mSetts.setValue("weights_id", ui->cbWeights->currentIndex());
 }
 
-void DialogConfig::updateParams()
+LlamaWorker::Params DialogConfig::updateParams() const
 {
-    mParams.context = ui->sbMaxContext->value();
-    mParams.gpu_layers = ui->sbGpuLayers->value();
-    mParams.temp = ui->dsbTemp->value();
-    mParams.system_prompt = ui->pteSystemPrompt->toPlainText();
-    mParams.enable_thinking = ui->chbThinking->isChecked();
-    mParams.main_gpu = ui->sbMainGPU->value();
-    mParams.type_k = KVCacheType.value(ui->cbKVKey->currentText());
-    mParams.type_v = KVCacheType.value(ui->cbKVValue->currentText());
-}
-
-void DialogConfig::on_buttonBox_accepted()
-{
-    updateParams();
-
+    LlamaWorker::Params Params;
+    Params.context = ui->sbMaxContext->value();
+    Params.gpu_layers = ui->sbGpuLayers->value();
+    Params.temp = ui->dsbTemp->value();
+    Params.system_prompt = ui->pteSystemPrompt->toPlainText();
+    Params.enable_thinking = ui->chbThinking->isChecked();
+    Params.main_gpu = ui->sbMainGPU->value();
+    Params.type_k = KVCacheType.value(ui->cbKVKey->currentText());
+    Params.type_v = KVCacheType.value(ui->cbKVValue->currentText());
     auto spl = ui->leSplitted->text().split(",");
     QVector<float> vspl;
-    for(auto sf: spl){
+    for(const auto &sf: spl){
         bool ok{};
         auto f = sf.toFloat(&ok);
         if(ok){
@@ -210,8 +198,14 @@ void DialogConfig::on_buttonBox_accepted()
         }
     }
 
-    mParams.splitBetweenDevices = vspl;
-    mParams.selectedDevices = ldev;
+    Params.splitBetweenDevices = vspl;
+    Params.selectedDevices = ldev;
+    return Params;
+}
+
+void DialogConfig::on_buttonBox_accepted()
+{
+
 }
 
 void DialogConfig::makeToolButton(QPlainTextEdit* plainTextEdit,

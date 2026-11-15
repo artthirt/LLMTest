@@ -22,6 +22,7 @@ ChatWidget::ChatWidget(QWidget *parent)
         mChatView.clearContent();
         mContent.json = {};
         mContent.context = {};
+        emit clearContent(mContent.sess_id);
     });
 
     v->addWidget(tbt);

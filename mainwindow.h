@@ -67,10 +67,10 @@ private:
     QStandardItemModel mTabModel;
     DialogConfig mDlgConfig;
     //std::map<int, Content> mCurrentContent;
-    std::map<int, ChatWidget*> mChatWidgets;
+    std::map<int64_t, ChatWidget*> mChatWidgets;
     CircularProgress mContextIndicator;
-    int mLastRow{};
-    int mSessionId{};
+    int64_t mCurrentSessionId{};
+    int64_t mSessionId{};
 
     //QTextEdit *mTextEdit{};
 
@@ -87,8 +87,10 @@ private:
 
     void updateTabs();
 
-    void loadItem(int row);
-    void addNewSession(int sessId, Content &&c);
+    void loadItem(int64_t sessId);
+    void addNewSession(Content &&c);
+
+    Content getNewContent(const QString& capt, const QByteArray& json_messages = {});
 
     void makeToolButton(QWidget *widget,
                         const QString &text,

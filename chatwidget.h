@@ -30,6 +30,9 @@ public:
 
     void generationFinished();
 
+signals:
+    void clearContent(int64_t sessId);
+
 public slots:
     void onSendReasoning(QString text);
     void onSendContent(QString text);

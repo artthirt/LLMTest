@@ -19,6 +19,7 @@ public:
     //QString content;
     QByteArray json;
     std::vector<common_chat_msg> context;
+    int64_t sess_id{};
 
     QSharedPointer<QTextDocument> _formatted;
 
@@ -64,6 +65,7 @@ inline QDataStream& operator<<(QDataStream& out, const Content& c)
         out << QString::fromStdString(v.role) << QString::fromStdString(v.content);
     }
     out << c.json;
+    out << c.sess_id;
     return out;
 }
 
@@ -88,6 +90,7 @@ inline QDataStream& operator>>(QDataStream& in, Content& c)
         c.context.push_back(msg);
     }
     in >> c.json;
+    in >> c.sess_id;
     return in;
 }
 
@@ -148,8 +151,9 @@ public:
     QStringList getDevices() const;
     std::map<QString, ggml_backend_dev_t> getDevicesIdByName() const;
 
-    void swapMessages(std::vector<common_chat_msg> &messages);
-    std::vector<common_chat_msg> messages() const { return mMessages; }
+    void swapContext(std::vector<common_chat_msg> &messages);
+    void setContext(const std::vector<common_chat_msg> &messages);
+    std::vector<common_chat_msg> context() const { return mMessages; }
 
 signals:
     void loadingProgress(float);

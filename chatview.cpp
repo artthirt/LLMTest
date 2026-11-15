@@ -92,7 +92,9 @@ void ChatView::paintEvent(QPaintEvent *event)
 
     QPainter painter(viewport());
 
-    painter.fillRect(event->rect(), mBackground);
+    painter.setBrush(mBackground);
+    painter.setPen(Qt::NoPen);
+    painter.drawRoundedRect(event->rect(), 7, 7);
 
     int scroll = verticalScrollBar()->value();
     auto r = event->rect();

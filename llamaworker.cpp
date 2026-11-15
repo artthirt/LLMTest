@@ -96,9 +96,18 @@ std::map<QString, ggml_backend_dev_t> LlamaWorker::getDevicesIdByName() const
     return ret;
 }
 
-void LlamaWorker::swapMessages(std::vector<common_chat_msg> &messages)
+void LlamaWorker::swapContext(std::vector<common_chat_msg> &messages)
 {
     std::swap(mMessages, messages);
+}
+
+void LlamaWorker::setContext(const std::vector<common_chat_msg> &messages)
+{
+    mMessages = messages;
+    qDebug() << "setContext";
+    for(const auto &msg: mMessages){
+        qDebug() << "  role:" << msg.role << ", length:" << msg.content.length();
+    }
 }
 
 void LlamaWorker::loadModel(const QString &gguf, const Params &params)
@@ -247,6 +256,7 @@ void LlamaWorker::clearMessage()
     // }
     mPrevLen = {};
     mMessages = {};
+    qDebug() << "Clear Messages";
 }
 
 void LlamaWorker::addNewMessage(QString system_prompt, QString user)
@@ -282,7 +292,7 @@ void LlamaWorker::addNewMessage(QString system_prompt, QString user)
     mIsGen.exchange(true);
     mStop.exchange(false);
 
-    if(!system_prompt.isEmpty()){
+    if(!system_prompt.isEmpty() && mMessages.empty()){
         common_chat_msg msg;
         msg.role = "system";
         msg.content = system_prompt.toStdString();
