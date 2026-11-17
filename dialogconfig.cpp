@@ -127,6 +127,7 @@ void DialogConfig::loadSettings()
         }
         on_cbPreset_currentIndexChanged(0);
     }
+    ui->cbPreset->setCurrentIndex(mSetts.value("system_prompt_index").toInt());
 
     auto weights = mSetts.value("weights").toStringList();
     auto weights_id = mSetts.value("weights_id").toInt();
@@ -155,6 +156,7 @@ void DialogConfig::saveSettings()
     mSetts.setValue("selected_devices", mSelectedDevices);
 
     mSetts.setValue("system_prompt_presets", mSystemPromptPresets);
+    mSetts.setValue("system_prompt_index", ui->cbPreset->currentIndex());
 
     mSetts.setValue("presets", mSystemPromptPresets);
 
