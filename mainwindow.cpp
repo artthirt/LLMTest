@@ -4,6 +4,7 @@
 
 #include <QDialog>
 #include <QFileDialog>
+#include <QColorDialog>
 #include <QSettings>
 #include <QFileInfo>
 #include <QTextEdit>
@@ -12,6 +13,8 @@
 #include <QPushButton>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
+
+#include "dlgstyle.h"
 
 class DialogSession: public QDialog{
 public:
@@ -329,6 +332,9 @@ void MainWindow::on_pbSend_clicked()
 void MainWindow::loadSettings()
 {
     auto tabsList = mDlgConfig.settings()->value("tabs_list_v2").toList();
+
+    auto styleBa = mDlgConfig.settings()->value("chat_style").toByteArray();
+
     int64_t firstSId{-1};
     for(const auto &v: tabsList){
         auto c = v.value<Content>();
@@ -339,7 +345,9 @@ void MainWindow::loadSettings()
         item->setData(c.sess_id);
         mTabModel.appendRow(item);
         int id = mTabModel.rowCount() - 1;
-        addNewSession(std::move(c));
+        auto *cw = addNewSession(std::move(c));
+        if(cw && !styleBa.isEmpty())
+            cw->setFromJsonStyle(styleBa);
         //mCurrentContent[id] = c;
     }
     if(firstSId >= 0){
@@ -352,12 +360,18 @@ void MainWindow::loadSettings()
 void MainWindow::saveSettings()
 {
     QList<QVariant> tabs;
+    QByteArray styleBa;
     for(const auto &kv: mChatWidgets){
         auto *item = kv.second;
         if(item){
             tabs.append(QVariant::fromValue<Content>(item->content()));
+            if(styleBa.isEmpty())
+                styleBa = item->toJsonStyleBA();
         }
     }
+
+    mDlgConfig.settings()->setValue("chat_style", styleBa);
+
     mDlgConfig.settings()->setValue("tabs_list_v2", tabs);
 
     mDlgConfig.saveSettings();
@@ -454,6 +468,66 @@ void MainWindow::makeToolButton(QWidget *widget,
     updatePosition();
 }
 
+void MainWindow::setUserStyle(const Style &s)
+{
+    for(auto& v: mChatWidgets){
+        v.second->setUserStyle(s);
+    }
+}
+
+Style MainWindow::userStyle() const
+{
+    for(auto& v: mChatWidgets){
+        return v.second->userStyle();
+    }
+    return {};
+}
+
+void MainWindow::setReasoningStyle(const Style &s)
+{
+    for(auto& v: mChatWidgets){
+        v.second->setReasoningStyle(s);
+    }
+}
+
+Style MainWindow::reasoningStyle() const
+{
+    for(auto& v: mChatWidgets){
+        return v.second->reasoningStyle();
+    }
+    return {};
+}
+
+void MainWindow::setContentStyle(const Style &s)
+{
+    for(auto& v: mChatWidgets){
+        v.second->setContentStyle(s);
+    }
+}
+
+Style MainWindow::contentStyle() const
+{
+    for(auto& v: mChatWidgets){
+        return v.second->contentStyle();
+    }
+    return {};
+}
+
+void MainWindow::setBackgroundColor(QColor c)
+{
+    for(auto& v: mChatWidgets){
+        v.second->setBackgroundColor(c);
+    }
+}
+
+QColor MainWindow::backgroundColor() const
+{
+    for(auto& v: mChatWidgets){
+        return v.second->backgroundColor();
+    }
+    return Qt::darkGray;
+}
+
 void MainWindow::on_tbtConfig_clicked()
 {
     mDlgConfig.show();
@@ -530,7 +604,7 @@ void MainWindow::onCloseItemRequested(const QModelIndex &index)
     });
 }
 
-void MainWindow::addNewSession(Content &&c)
+ChatWidget* MainWindow::addNewSession(Content &&c)
 {
     auto sessId = c.sess_id;
     auto *cw = new ChatWidget();
@@ -549,6 +623,8 @@ void MainWindow::addNewSession(Content &&c)
             mWorker->clearMessage();
         }
     });
+
+    return cw;
 }
 
 Content MainWindow::getNewContent(const QString &capt, const QByteArray &json_messages)
@@ -606,4 +682,45 @@ void MainWindow::on_pbClearAll_clicked()
     mChatWidgets.clear();
 }
 
+void MainWindow::on_actionUser_Style_triggered()
+{
+    Style s = userStyle();
+
+    DlgStyle dlg;
+    dlg.setStyle(s);
+    if(dlg.exec()){
+        setUserStyle(dlg.style());
+    }
+}
+
+void MainWindow::on_actionReasonong_Style_triggered()
+{
+    Style s = reasoningStyle();
+
+    DlgStyle dlg;
+    dlg.setStyle(s);
+    if(dlg.exec()){
+        setReasoningStyle(dlg.style());
+    }
+}
+
+void MainWindow::on_actionContent_Style_triggered()
+{
+    Style s = contentStyle();
+
+    DlgStyle dlg;
+    dlg.setStyle(s);
+    if(dlg.exec()){
+        setContentStyle(dlg.style());
+    }
+}
+
+void MainWindow::on_actionChat_Background_triggered()
+{
+    QColorDialog dlg;
+    if(dlg.exec()){
+        auto c = dlg.currentColor();
+        setBackgroundColor(c);
+    }
+}
 

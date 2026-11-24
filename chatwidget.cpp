@@ -57,6 +57,56 @@ void ChatWidget::addUser(const QString &msg)
     mContent.json = mChatView.toJsonBA();
 }
 
+void ChatWidget::setUserStyle(const Style &s)
+{
+    mChatView.setUserStyle(s);
+}
+
+Style ChatWidget::userStyle() const
+{
+    return mChatView.userStyle();
+}
+
+void ChatWidget::setReasoningStyle(const Style &s)
+{
+    mChatView.setReasoningStyle(s);
+}
+
+Style ChatWidget::reasoningStyle() const
+{
+    return mChatView.reasoningStyle();
+}
+
+void ChatWidget::setContentStyle(const Style &s)
+{
+    mChatView.setContentStyle(s);
+}
+
+Style ChatWidget::contentStyle() const
+{
+    return mChatView.contentStyle();
+}
+
+void ChatWidget::setBackgroundColor(QColor c)
+{
+    mChatView.setBackgroundColor(c);
+}
+
+QColor ChatWidget::backgroundColor() const
+{
+    return mChatView.backgroundColor();
+}
+
+QByteArray ChatWidget::toJsonStyleBA() const
+{
+    return mChatView.toJsonStyleBA();
+}
+
+void ChatWidget::setFromJsonStyle(const QByteArray &obj)
+{
+    mChatView.setFromJsonStyle(obj);
+}
+
 void ChatWidget::generationFinished()
 {
     mChatView.finalize(mChatReasoningId);

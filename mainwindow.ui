@@ -235,11 +235,41 @@
      <x>0</x>
      <y>0</y>
      <width>1012</width>
-     <height>25</height>
+     <height>21</height>
     </rect>
    </property>
+   <widget class="QMenu" name="menuView">
+    <property name="title">
+     <string>View</string>
+    </property>
+    <addaction name="actionUser_Style"/>
+    <addaction name="actionReasonong_Style"/>
+    <addaction name="actionContent_Style"/>
+    <addaction name="actionChat_Background"/>
+   </widget>
+   <addaction name="menuView"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
+  <action name="actionUser_Style">
+   <property name="text">
+    <string>User Style</string>
+   </property>
+  </action>
+  <action name="actionReasonong_Style">
+   <property name="text">
+    <string>Reasonong Style</string>
+   </property>
+  </action>
+  <action name="actionContent_Style">
+   <property name="text">
+    <string>Content Style</string>
+   </property>
+  </action>
+  <action name="actionChat_Background">
+   <property name="text">
+    <string>Chat Background</string>
+   </property>
+  </action>
  </widget>
  <resources/>
  <connections/>

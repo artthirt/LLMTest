@@ -28,6 +28,18 @@ public:
     void setIndexW(int v) { mIndexW = v; }
     int indexW() const { return mIndexW; }
 
+    void setUserStyle(const Style &s);
+    Style userStyle() const;
+    void setReasoningStyle(const Style &s);
+    Style reasoningStyle() const;
+    void setContentStyle(const Style &s);
+    Style contentStyle() const;
+    void setBackgroundColor(QColor c);
+    QColor backgroundColor() const;
+
+    QByteArray toJsonStyleBA() const;
+    void setFromJsonStyle(const QByteArray &obj);
+
     void generationFinished();
 
 signals:

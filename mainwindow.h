@@ -59,6 +59,14 @@ private slots:
 
     void onCloseItemRequested(const QModelIndex &index);
 
+    void on_actionUser_Style_triggered();
+
+    void on_actionReasonong_Style_triggered();
+
+    void on_actionContent_Style_triggered();
+
+    void on_actionChat_Background_triggered();
+
 protected:
     bool eventFilter(QObject *watched, QEvent *event) override;
 
@@ -88,7 +96,7 @@ private:
     void updateTabs();
 
     void loadItem(int64_t sessId);
-    void addNewSession(Content &&c);
+    ChatWidget* addNewSession(Content &&c);
 
     Content getNewContent(const QString& capt, const QByteArray& json_messages = {});
 
@@ -97,5 +105,14 @@ private:
                         std::function<void()> fun,
                         const QString &tooltip,
                         int X);
+
+    void setUserStyle(const Style &s);
+    Style userStyle() const;
+    void setReasoningStyle(const Style &s);
+    Style reasoningStyle() const;
+    void setContentStyle(const Style &s);
+    Style contentStyle() const;
+    void setBackgroundColor(QColor c);
+    QColor backgroundColor() const;
 };
 #endif // MAINWINDOW_H

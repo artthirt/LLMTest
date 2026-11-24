@@ -53,6 +53,7 @@ add_subdirectory(llama)
 
 add_executable(LLMTest
     ${PROJECT_SOURCES}
+    dlgstyle.h dlgstyle.cpp
 )
 
 target_link_libraries(LLMTest PRIVATE

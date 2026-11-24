@@ -41,6 +41,30 @@ bool ChatView::empty() const
     return mBlocks.empty();
 }
 
+void ChatView::setUserStyle(const Style &s)
+{
+    mUserStyle = s;
+    relayout();
+}
+
+void ChatView::setReasoningStyle(const Style &s)
+{
+    mReasoningStyle = s;
+    relayout();
+}
+
+void ChatView::setContentStyle(const Style &s)
+{
+    mContentStyle = s;
+    relayout();
+}
+
+void ChatView::setBackgroundColor(QColor c)
+{
+    mBackground = c;
+    relayout();
+}
+
 void ChatView::clearContent()
 {
     mBlocks.clear();
@@ -271,20 +295,7 @@ void ChatView::setLeapToBottom(bool v)
 QJsonObject ChatView::toJson() const
 {
     QJsonArray arr;
-    QJsonObject obj;
-
-    auto getJsonStyle = [this](const Style &s){
-        QJsonObject o;
-        o["bold"] = s.bold;
-        o["italic"] = s.italic;
-        o["textColor"] = s.textColor.name();
-        o["background"] = s.background.name();
-        return o;
-    };
-
-    obj["user_style"] = getJsonStyle(mUserStyle);
-    obj["reasoning_style"] = getJsonStyle(mReasoningStyle);
-    obj["content_style"] = getJsonStyle(mContentStyle);
+    QJsonObject obj = toJsonStyle();
 
     for(const auto &b: mBlocks){
         QJsonObject o;
@@ -307,26 +318,14 @@ QByteArray ChatView::toJsonBA() const
 
 void ChatView::setFromJson(const QJsonObject &obj)
 {
-    if(obj.empty() || !obj.contains("messages")){
+    if(obj.empty()){
         return;
     }
     auto arr = obj["messages"].toArray();
-    if(arr.empty()) return;
 
-    auto getStyle = [this](QJsonObject o){
-        Style s;
-        s.background = QColor(o["background"].toString());
-        s.textColor = QColor(o["textColor"].toString());
-        s.bold = o["bold"].toBool();
-        s.italic = o["background"].toBool();
-        return s;
-    };
+    qDebug() << obj;
 
-    if(obj.contains("user_style")){
-        mUserStyle = getStyle(obj["user_style"].toObject());
-        mReasoningStyle = getStyle(obj["reasoning_style"].toObject());
-        mContentStyle = getStyle(obj["content_style"].toObject());
-    }
+    setFromJsonStyle(obj, false);
 
     clearContent();
     for(int i = 0; i < arr.size(); ++i){
@@ -344,6 +343,71 @@ void ChatView::setFromJson(const QByteArray &obj)
 {
     QJsonObject o = QJsonDocument::fromJson(obj).object();
     setFromJson(o);
+}
+
+QJsonObject ChatView::toJsonStyle() const
+{
+    QJsonArray arr;
+    QJsonObject obj;
+
+    auto getJsonStyle = [this](const Style &s){
+        QJsonObject o;
+        o["bold"] = s.bold;
+        o["italic"] = s.italic;
+        o["textColor"] = s.textColor.name();
+        o["background"] = s.background.name();
+        return o;
+    };
+
+    obj["user_style"] = getJsonStyle(mUserStyle);
+    obj["reasoning_style"] = getJsonStyle(mReasoningStyle);
+    obj["content_style"] = getJsonStyle(mContentStyle);
+
+    obj["background"] = mBackground.name();
+    return obj;
+}
+
+QByteArray ChatView::toJsonStyleBA() const
+{
+    auto o = toJsonStyle();
+    QJsonDocument d(o);
+    return d.toJson(QJsonDocument::Compact);
+}
+
+void ChatView::setFromJsonStyle(const QJsonObject &obj, bool _relayout)
+{
+    if(obj.empty()){
+        return;
+    }
+
+    auto getStyle = [this](QJsonObject o){
+        Style s;
+        s.background = QColor(o["background"].toString());
+        s.textColor = QColor(o["textColor"].toString());
+        s.bold = o["bold"].toBool();
+        s.italic = o["background"].toBool();
+        return s;
+    };
+
+    if(obj.contains("user_style")){
+        mUserStyle = getStyle(obj["user_style"].toObject());
+        mReasoningStyle = getStyle(obj["reasoning_style"].toObject());
+        mContentStyle = getStyle(obj["content_style"].toObject());
+    }
+
+    if(obj.contains("background")){
+        mBackground = QColor(obj["background"].toString());
+        qDebug() << mBackground;
+    }
+
+    if(_relayout)
+        relayout();
+}
+
+void ChatView::setFromJsonStyle(const QByteArray &obj)
+{
+    QJsonObject o = QJsonDocument::fromJson(obj).object();
+    setFromJsonStyle(o);
 }
 
 int ChatView::blockIndexAt(int y)

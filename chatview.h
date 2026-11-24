@@ -14,7 +14,7 @@ struct Style{
     bool bold{};
     bool italic{};
     QColor textColor{Qt::white};
-    QColor background{};
+    QColor background{QColor(Qt::gray).lighter(60)};
 };
 
 struct Block{
@@ -51,6 +51,16 @@ public:
     ID addAgentReasoning(const QString& text);
     ID addAgentContent(const QString& text);
 
+    void setUserStyle(const Style &s);
+    Style userStyle() const { return mUserStyle; }
+    void setReasoningStyle(const Style &s);
+    Style reasoningStyle() const { return mReasoningStyle; }
+    void setContentStyle(const Style &s);
+    Style contentStyle() const { return mContentStyle; }
+
+    void setBackgroundColor(QColor c);
+    QColor backgroundColor() const { return mBackground; }
+
     void clearContent();
     void setContent(ID id, const QString& text);
     void relayout();
@@ -63,6 +73,11 @@ public:
     QByteArray toJsonBA() const;
     void setFromJson(const QJsonObject &obj);
     void setFromJson(const QByteArray &obj);
+
+    QJsonObject toJsonStyle() const;
+    QByteArray toJsonStyleBA() const;
+    void setFromJsonStyle(const QJsonObject &obj, bool _relayout = true);
+    void setFromJsonStyle(const QByteArray &obj);
 
     int blockIndexAt(int y);
 
